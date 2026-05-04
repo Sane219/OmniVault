@@ -1,0 +1,19 @@
+pre-commit:
+  parallel: true
+  commands:
+    lint-python:
+      glob: "**/*.py"
+      run: uv run ruff check {staged_files}
+    lint-frontend:
+      glob: "apps/web/**/*.{js,ts,jsx,tsx}"
+      run: cd apps/web && pnpm dlx eslint {staged_files}
+
+pre-push:
+  parallel: true
+  commands:
+    test-python:
+      glob: "apps/api-core/**/*.py apps/worker-ai/**/*.py"
+      run: uv run pytest
+    test-frontend:
+      glob: "apps/web/**/*.{js,ts,jsx,tsx}"
+      run: cd apps/web && pnpm run test

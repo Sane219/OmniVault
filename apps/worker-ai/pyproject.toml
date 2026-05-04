@@ -1,0 +1,18 @@
+[project]
+name = "worker-ai"
+version = "0.1.0"
+description = "Hatchet AI Worker for OmniVault"
+dependencies = [
+    "hatchet-sdk",
+    "edgedb"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pytest"
+]
