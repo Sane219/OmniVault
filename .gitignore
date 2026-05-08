@@ -22,7 +22,15 @@ yarn-error.log*
 pnpm-debug.log*
 
 # EdgeDB
+dbschema/
 dbschema/migrations/
+
+# Gel CLI
+gel.local.toml
+gel.toml
+
+# Local storage (runtime uploads)
+local_storage/
 
 # OS
 .DS_Store
@@ -36,3 +44,6 @@ Thumbs.db
 # OmniVault specific
 .agents
 graphify-out/
+
+# Test artifacts
+test_*.pdf
