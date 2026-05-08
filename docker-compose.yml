@@ -17,30 +17,30 @@ services:
     volumes:
       - redis_data:/data
 
-  api-core:
-    build:
-      context: ./apps/api-core
-    ports:
-      - "8080:8080"
-    environment:
-      - EDGEDB_DSN=edgedb://edgedb@edgedb:5656/edgedb
-    depends_on:
-      - edgedb
-      - redis
-    volumes:
-      - ./apps/api-core:/app
+  # api-core:
+  #   build:
+  #     context: ./apps/api-core
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - EDGEDB_DSN=edgedb://edgedb@edgedb:5656/edgedb
+  #   depends_on:
+  #     - edgedb
+  #     - redis
+  #   volumes:
+  #     - ./apps/api-core:/app
 
-  worker-ai:
-    build:
-      context: ./apps/worker-ai
-    environment:
-      - REDIS_URL=redis://redis:6379/0
-      - EDGEDB_DSN=edgedb://edgedb@edgedb:5656/edgedb
-    depends_on:
-      - redis
-      - edgedb
-    volumes:
-      - ./apps/worker-ai:/app
+  # worker-ai:
+  #   build:
+  #     context: ./apps/worker-ai
+  #   environment:
+  #     - REDIS_URL=redis://redis:6379/0
+  #     - EDGEDB_DSN=edgedb://edgedb@edgedb:5656/edgedb
+  #   depends_on:
+  #     - redis
+  #     - edgedb
+  #   volumes:
+  #     - ./apps/worker-ai:/app
 
 volumes:
   edgedb_data:

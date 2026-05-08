@@ -4,15 +4,22 @@ version = "0.1.0"
 description = "Robyn backend for OmniVault"
 dependencies = [
     "robyn",
-    "edgedb"
+    "edgedb",
+    "PyJWT",
+    "bcrypt",
+    "hatchet-sdk",
+    "python-dotenv>=1.2.2",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "ruff",
     "pytest"
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/api_core"]
