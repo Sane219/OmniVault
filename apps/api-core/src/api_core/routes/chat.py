@@ -1,8 +1,8 @@
 import json
 import asyncio
-import edgedb
 from robyn import SubRouter, Response, SSEResponse, SSEMessage
 from api_core.auth_utils import decode_token
+from api_core.db import supabase
 
 try:
     from google import genai
@@ -40,7 +40,6 @@ def _prune_graph(graph_data: dict | list, node_context: dict | None) -> dict | l
     if node_context and node_context.get("id"):
         focal_id = str(node_context["id"])
 
-        # Collect IDs of direct neighbors (one hop in either direction)
         neighbor_ids: set[str] = {focal_id}
         for e in edges:
             src, tgt = str(e.get("source", "")), str(e.get("target", ""))
@@ -59,11 +58,9 @@ def _prune_graph(graph_data: dict | list, node_context: dict | None) -> dict | l
 
     # ── Case 2: No selection, large graph → root nodes only ──────────────────
     if len(nodes) > 1000:
-        # Nodes that never appear as a target have no parents → they are roots
         target_ids: set[str] = {str(e.get("target", "")) for e in edges}
         root_nodes = [n for n in nodes if str(n.get("id", "")) not in target_ids]
 
-        # Include edges between root nodes only
         root_ids: set[str] = {str(n.get("id", "")) for n in root_nodes}
         root_edges = [
             e for e in edges
@@ -77,7 +74,6 @@ def _prune_graph(graph_data: dict | list, node_context: dict | None) -> dict | l
 
 
 def _build_prompt(graph_data: dict | list, message: str, node_context: dict | None) -> str:
-    # Prune first, then compress (no whitespace)
     pruned = _prune_graph(graph_data, node_context)
     graph_json = json.dumps(pruned, separators=(',', ':'))
 
@@ -116,10 +112,11 @@ def _err(status: int, message: str) -> Response:
 @chat_router.post("/document/:id/chat")
 async def chat_with_document(request):
     """
-    Vectorless RAG chat — pruned graph context + SSE streaming via Gemini.
+    Vectorless RAG chat with streaming SSE response.
+    Fetches graph_data + gemini_api_key via a joined Supabase query.
     """
     # ── Auth ──────────────────────────────────────────────────────────────────
-    email, err = decode_token(request)
+    user_id, err = decode_token(request)
     if err:
         return err
 
@@ -139,36 +136,35 @@ async def chat_with_document(request):
 
     node_context = body.get("nodeContext")  # optional: {id, label, type}
 
-    # ── Fetch from EdgeDB ─────────────────────────────────────────────────────
+    # ── Fetch document + owner's API key from Supabase (joined) ──────────────
     try:
-        db = edgedb.create_client()
-        query = """
-        SELECT Document {
-            graph_data,
-            owner: { gemini_api_key }
-        }
-        FILTER .id = <uuid>$doc_id
-          AND .owner.email = <str>$email
-        LIMIT 1;
-        """
-        result = await asyncio.to_thread(
-            db.query_single, query, doc_id=document_id, email=email
+        response = await asyncio.to_thread(
+            lambda: supabase.table("documents")
+            .select("*, users(gemini_api_key)")
+            .eq("id", document_id)
+            .eq("owner_id", user_id)
+            .limit(1)
+            .execute()
         )
 
-        if not result:
+        if not response.data:
             return _err(404, "Document not found")
-        if not result.graph_data:
+
+        doc = response.data[0]
+
+        if not doc.get("graph_data"):
             return _err(409, "Document graph is not ready yet")
 
-        api_key = result.owner.gemini_api_key if result.owner else None
+        # Supabase returns the foreign-key join under the related table name
+        owner_data = doc.get("users") or {}
+        api_key = owner_data.get("gemini_api_key") if isinstance(owner_data, dict) else None
+
         if not api_key:
             return _err(400, "No Gemini API key configured. Please add one in Settings.")
 
-        graph_data = (
-            result.graph_data
-            if isinstance(result.graph_data, (dict, list))
-            else json.loads(result.graph_data)
-        )
+        graph_data = doc["graph_data"]
+        if isinstance(graph_data, str):
+            graph_data = json.loads(graph_data)
 
     except Exception as e:
         return _err(500, f"Database error: {e}")
@@ -193,7 +189,6 @@ async def chat_with_document(request):
                     yield SSEMessage(data=text)
 
         except Exception as e:
-            # Surface the error in-stream so the frontend can render it
             yield SSEMessage(data=f"ERROR: {e}", event="error")
 
     return SSEResponse(generate())

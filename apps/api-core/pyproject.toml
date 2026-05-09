@@ -4,11 +4,11 @@ version = "0.1.0"
 description = "Robyn backend for OmniVault"
 dependencies = [
     "robyn",
-    "edgedb",
     "PyJWT",
     "bcrypt",
     "hatchet-sdk",
     "python-dotenv>=1.2.2",
+    "supabase>=2.30.0",
 ]
 
 [build-system]

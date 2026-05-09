@@ -12,7 +12,8 @@ def decode_token(request) -> tuple[str | None, Response | None]:
     """
     Extracts and validates the Bearer JWT from the Authorization header.
 
-    Returns (email, None) on success, or (None, error_response) on failure.
+    Returns (user_id, None) on success, or (None, error_response) on failure.
+    user_id is the UUID string stored in the 'sub' claim (set at login).
     """
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
@@ -24,10 +25,10 @@ def decode_token(request) -> tuple[str | None, Response | None]:
     token = auth_header.split(" ", 1)[1]
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-        email = payload.get("sub")
-        if not email:
+        user_id = payload.get("sub")
+        if not user_id:
             raise ValueError("Token missing 'sub' claim")
-        return email, None
+        return user_id, None
     except Exception as e:
         return None, Response(
             status_code=401,

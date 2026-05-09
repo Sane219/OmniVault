@@ -4,10 +4,10 @@ version = "0.1.0"
 description = "Hatchet AI Worker for OmniVault"
 dependencies = [
     "hatchet-sdk",
-    "edgedb",
     "python-dotenv>=1.2.2",
     "google-genai>=2.0.1",
     "pymupdf>=1.27.2.3",
+    "supabase>=2.30.0",
 ]
 
 [build-system]

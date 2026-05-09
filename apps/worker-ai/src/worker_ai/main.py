@@ -1,11 +1,20 @@
 import asyncio
 import json
-import edgedb
+import os
 from hatchet_sdk import Hatchet, Context
 from dotenv import load_dotenv
+from supabase import create_client, Client
 
 from worker_ai.rag import extract_document_structure, generate_knowledge_graph
+
 load_dotenv()
+
+# ── Supabase client ────────────────────────────────────────────────────────────
+_supabase_url: str = os.getenv("SUPABASE_URL", "")
+_supabase_key: str = os.getenv("SUPABASE_KEY", "")
+supabase: Client = create_client(_supabase_url, _supabase_key)
+
+# ── Hatchet setup ──────────────────────────────────────────────────────────────
 hatchet = Hatchet()
 
 document_workflow = hatchet.workflow(
@@ -14,47 +23,32 @@ document_workflow = hatchet.workflow(
 )
 
 
-def _update_status(document_id: str, status: str, *, error_message: str | None = None, graph_data: dict | None = None):
+def _update_status(
+    document_id: str,
+    status: str,
+    *,
+    error_message: str | None = None,
+    graph_data: dict | None = None,
+) -> None:
     """
-    Synchronously updates a Document's status (and optional fields) in EdgeDB.
-    status should be one of: 'Processing', 'Completed', 'Failed'
+    Synchronously updates a document's status (and optional fields) in Supabase.
+    status should be one of: 'PROCESSING' | 'COMPLETED' | 'FAILED'
     """
-    client = edgedb.create_client()
+    update_payload: dict = {"status": status}
 
-    if status == "Processing":
-        query = """
-        UPDATE Document
-        FILTER .id = <uuid>$doc_id
-        SET { status := DocumentStatus.Processing };
-        """
-        client.query(query, doc_id=document_id)
+    if status == "FAILED":
+        update_payload["error_message"] = error_message or "Unknown error"
 
-    elif status == "Failed":
-        query = """
-        UPDATE Document
-        FILTER .id = <uuid>$doc_id
-        SET {
-            status := DocumentStatus.Failed,
-            error_message := <str>$error_message,
-        };
-        """
-        client.query(query, doc_id=document_id, error_message=error_message or "Unknown error")
+    if status == "COMPLETED" and graph_data is not None:
+        # Supabase handles Python dict → JSONB conversion automatically
+        update_payload["graph_data"] = graph_data
 
-    elif status == "Completed":
-        query = """
-        UPDATE Document
-        FILTER .id = <uuid>$doc_id
-        SET {
-            status := DocumentStatus.Completed,
-            graph_data := <json>$graph_data,
-        };
-        """
-        client.query(query, doc_id=document_id, graph_data=json.dumps(graph_data))
+    supabase.table("documents").update(update_payload).eq("id", document_id).execute()
 
 
 @document_workflow.task()
 async def process_document(input, ctx: Context):
-    input_dict = input.model_dump() if hasattr(input, 'model_dump') else dict(input)
+    input_dict = input.model_dump() if hasattr(input, "model_dump") else dict(input)
     document_id = input_dict.get("document_id")
     file_path = input_dict.get("file_path")
 
@@ -63,38 +57,45 @@ async def process_document(input, ctx: Context):
 
     print(f"[Worker] Starting processing for Document ID: {document_id}, file: {file_path}")
 
-    # ── Step 1: Mark as Processing ───────────────────────────────────────────
+    # ── Step 1: Mark as PROCESSING ───────────────────────────────────────────
     try:
-        await asyncio.to_thread(_update_status, document_id, "Processing")
+        await asyncio.to_thread(_update_status, document_id, "PROCESSING")
     except Exception as e:
-        print(f"[Worker][WARN] Could not set Processing status: {e}")
-        # Non-fatal: continue processing even if EdgeDB is unavailable
+        print(f"[Worker][WARN] Could not set PROCESSING status: {e}")
+        # Non-fatal — continue even if Supabase is temporarily unreachable
 
-    # ── Step 2: Fetch the user's Gemini API key from EdgeDB ─────────────────
+    # ── Step 2: Fetch the user's Gemini API key (joined query) ──────────────
     api_key: str | None = None
     try:
-        client = edgedb.create_client()
-        query = """
-        SELECT Document {
-            owner: { gemini_api_key }
-        } FILTER .id = <uuid>$doc_id LIMIT 1;
-        """
-        result = client.query_single(query, doc_id=document_id)
+        result = await asyncio.to_thread(
+            lambda: supabase.table("documents")
+            .select("*, users(gemini_api_key)")
+            .eq("id", document_id)
+            .limit(1)
+            .execute()
+        )
 
-        if not result or not result.owner:
-            raise ValueError("Document or owner not found in EdgeDB")
+        if not result.data:
+            raise ValueError("Document not found in Supabase")
 
-        api_key = result.owner.gemini_api_key
+        doc = result.data[0]
+        owner_data = doc.get("users") or {}
+        api_key = owner_data.get("gemini_api_key") if isinstance(owner_data, dict) else None
+
         if not api_key:
             raise ValueError("User has not provided a Gemini API Key")
 
     except Exception as e:
-        error_msg = "Invalid or missing Gemini API Key" if "api" in str(e).lower() or "key" in str(e).lower() else str(e)
+        error_msg = (
+            "Invalid or missing Gemini API Key"
+            if "api" in str(e).lower() or "key" in str(e).lower()
+            else str(e)
+        )
         print(f"[Worker] Failed to fetch API key: {e}")
         try:
-            await asyncio.to_thread(_update_status, document_id, "Failed", error_message=error_msg)
+            await asyncio.to_thread(_update_status, document_id, "FAILED", error_message=error_msg)
         except Exception as db_err:
-            print(f"[Worker][WARN] Could not persist Failed status: {db_err}")
+            print(f"[Worker][WARN] Could not persist FAILED status: {db_err}")
         return {"status": "error", "document_id": document_id, "error": error_msg}
 
     # ── Step 3: Extract document structure ───────────────────────────────────
@@ -103,7 +104,10 @@ async def process_document(input, ctx: Context):
     except Exception as e:
         print(f"[Worker] Failed to extract document structure: {e}")
         try:
-            await asyncio.to_thread(_update_status, document_id, "Failed", error_message=f"Document extraction failed: {e}")
+            await asyncio.to_thread(
+                _update_status, document_id, "FAILED",
+                error_message=f"Document extraction failed: {e}",
+            )
         except Exception:
             pass
         return {"status": "error", "document_id": document_id, "error": str(e)}
@@ -112,22 +116,25 @@ async def process_document(input, ctx: Context):
     try:
         graph = await asyncio.to_thread(generate_knowledge_graph, structured_text, api_key)
     except Exception as e:
-        error_msg = "Invalid or missing Gemini API Key" if "api" in str(e).lower() or "key" in str(e).lower() else f"AI generation failed: {e}"
+        error_msg = (
+            "Invalid or missing Gemini API Key"
+            if "api" in str(e).lower() or "key" in str(e).lower()
+            else f"AI generation failed: {e}"
+        )
         print(f"[Worker] Failed to generate knowledge graph: {e}")
         try:
-            await asyncio.to_thread(_update_status, document_id, "Failed", error_message=error_msg)
+            await asyncio.to_thread(_update_status, document_id, "FAILED", error_message=error_msg)
         except Exception:
             pass
         return {"status": "error", "document_id": document_id, "error": error_msg}
 
-    # ── Step 5: Persist Completed status + graph to EdgeDB ───────────────────
+    # ── Step 5: Persist COMPLETED status + graph to Supabase ─────────────────
     try:
-        await asyncio.to_thread(_update_status, document_id, "Completed", graph_data=graph)
+        await asyncio.to_thread(_update_status, document_id, "COMPLETED", graph_data=graph)
         print(f"[Worker] Successfully saved graph for Document ID: {document_id}")
     except Exception as e:
-        # Fallback: write to disk if EdgeDB is unavailable
         fallback_path = f"graph_{document_id}.json"
-        print(f"[Worker][WARN] Could not persist graph to EdgeDB: {e}. Falling back to {fallback_path}")
+        print(f"[Worker][WARN] Could not persist graph to Supabase: {e}. Falling back to {fallback_path}")
         with open(fallback_path, "w", encoding="utf-8") as f:
             json.dump(graph, f, indent=2)
 
