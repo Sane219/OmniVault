@@ -47,3 +47,5 @@ graphify-out/
 
 # Test artifacts
 test_*.pdf
+.agent/
+.opencode/

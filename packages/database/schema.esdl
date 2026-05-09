@@ -10,6 +10,7 @@ module default {
     required property created_at -> datetime {
       default := datetime_current();
     }
+    property gemini_api_key -> str;
   }
 
   type Workspace {

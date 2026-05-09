@@ -5,8 +5,8 @@ pre-commit:
       glob: "**/*.py"
       run: uv run ruff check {staged_files}
     lint-frontend:
-      glob: "apps/web/**/*.{js,ts,jsx,tsx}"
-      run: cd apps/web && pnpm dlx eslint {staged_files}
+      glob: "apps/web/src/**/*.{js,ts,jsx,tsx}"
+      run: cd apps/web && pnpm exec eslint "src/**/*.{js,ts,jsx,tsx}"
 
 pre-push:
   parallel: true
