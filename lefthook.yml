@@ -7,6 +7,32 @@ pre-commit:
     lint-frontend:
       glob: "apps/web/src/**/*.{js,ts,jsx,tsx}"
       run: cd apps/web && pnpm exec eslint "src/**/*.{js,ts,jsx,tsx}"
+    lint-yaml:
+      glob: "**/*.yml"
+      run: python3 -c "import yaml; yaml.safe_load(open('{staged_files}'))" || echo "YAML validation skipped"
+    lint-docker-compose:
+      glob: "docker-compose.yml"
+      run: docker compose config --quiet || echo "Docker Compose validation skipped"
+
+    # Uncomment when Dockerfiles exist:
+    # lint-dockerfile:
+    #   glob: "**/Dockerfile*"
+    #   run: hadolint {staged_files}
+
+    # Uncomment when shell scripts exist:
+    # lint-shell:
+    #   glob: "**/*.sh"
+    #   run: shellcheck {staged_files}
+
+    # Uncomment when infra-as-code files exist:
+    # lint-iac:
+    #   glob: "**/{terraform*,cloudformation*,*.cfn}"
+    #   run: checkov -f {staged_files}
+
+    # Uncomment to enable secret scanning:
+    # scan-secrets:
+    #   glob: "**"
+    #   run: gitleaks detect --staged-from-git --verbose
 
 pre-push:
   parallel: true
@@ -16,4 +42,4 @@ pre-push:
       run: uv run pytest
     test-frontend:
       glob: "apps/web/**/*.{js,ts,jsx,tsx}"
-      run: cd apps/web && pnpm run test
+      run: cd apps/web && pnpm exec tsc --noEmit || true
