@@ -1,3 +1,4 @@
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -22,4 +23,4 @@ async def h(request):
     return "Hello from OmniVault API Core!"
 
 if __name__ == "__main__":
-    app.start(port=8080)
+    app.start(host=os.getenv("HOST", "0.0.0.0"), port=int(os.getenv("PORT", 8080)))
