@@ -22,7 +22,7 @@ import { useStore } from '../store/useStore';
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-// ── Custom Node ───────────────────────────────────────────────────────────────
+// ── Custom Node ─────────────────────────────────────────────────────────────
 function CustomNode({ data, selected }: NodeProps) {
   return (
     <div
@@ -91,8 +91,17 @@ function Graph({ graphData }: KnowledgeGraphProps) {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { setSelectedNode } = useStore();
 
+  console.log('[KnowledgeGraph] Received:', JSON.stringify(graphData));
+
   useEffect(() => {
-    if (!graphData?.nodes || !graphData?.edges) return;
+    if (!graphData?.nodes || !graphData?.edges) {
+      console.log('[KnowledgeGraph] Invalid data');
+      return;
+    }
+    if (graphData.nodes.length === 0) {
+      console.log('[KnowledgeGraph] Empty nodes');
+      return;
+    }
 
     const initialNodes: Node[] = graphData.nodes.map((n) => ({
       id: String(n.id),
