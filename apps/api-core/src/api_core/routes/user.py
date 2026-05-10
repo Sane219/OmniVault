@@ -3,7 +3,7 @@ import jwt
 from robyn import SubRouter, Response
 from api_core.db import supabase
 
-user_router = SubRouter(__name__)
+user_router = SubRouter(__name__, prefix="/user")
 
 # Must match auth.py
 JWT_SECRET = "super_secret_key_change_in_production"

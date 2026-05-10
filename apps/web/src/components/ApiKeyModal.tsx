@@ -20,10 +20,18 @@ export function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
     setStatus('idle')
     
     try {
+      const match = document.cookie.match(/omnivault_token=([^;]+)/)
+      const token = match ? match[1] : ''
+      
+      const headers: HeadersInit = { 'Content-Type': 'application/json' }
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/api-key`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: apiKey })
+        headers,
+        body: JSON.stringify({ api_key: apiKey })
       })
       
       if (!res.ok) throw new Error('Failed to save API key')
