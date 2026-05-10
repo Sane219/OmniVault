@@ -5,7 +5,9 @@ import jwt
 from robyn import Response
 import json
 
-JWT_SECRET = "super_secret_key_change_in_production"
+import os
+
+SUPABASE_JWT_SECRET = os.environ.get("SUPABASE_JWT_SECRET", "super_secret_key_change_in_production")
 
 
 def decode_token(request) -> tuple[str | None, Response | None]:
@@ -24,7 +26,8 @@ def decode_token(request) -> tuple[str | None, Response | None]:
         )
     token = auth_header.split(" ", 1)[1]
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        # Supabase uses HS256 and the 'authenticated' audience
+        payload = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"], audience="authenticated")
         user_id = payload.get("sub")
         if not user_id:
             raise ValueError("Token missing 'sub' claim")
