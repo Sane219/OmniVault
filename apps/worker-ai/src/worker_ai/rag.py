@@ -81,10 +81,36 @@ def generate_knowledge_graph(text: str, api_key: str) -> dict:
         config=config
     )
     
-    print(f"[GEMINI] Raw response: {response.text[:200]}...")
-    
     try:
-        return json.loads(response.text)
+        raw_graph = json.loads(response.text)
+        print(f"[GEMINI] Raw response: {str(raw_graph)[:200]}...")
     except json.JSONDecodeError:
         print(f"Error decoding JSON. Raw response: {response.text}")
         raise ValueError("Gemini did not return valid JSON")
+    
+    # Convert to frontend format {nodes: [...], edges: [...]}
+    nodes = []
+    edges = []
+    topics = list(raw_graph.keys())
+    
+    for i, topic in enumerate(topics):
+        nodes.append({
+            "id": topic,
+            "label": topic,
+            "page": raw_graph[topic][0] if raw_graph[topic] else 1
+        })
+        if i > 0:
+            edges.append({
+                "id": f"e{i}",
+                "source": topics[i-1],
+                "target": topic
+            })
+    
+    # Add root node
+    final_graph = {
+        "nodes": [{"id": "root", "label": "Document", "page": 0}] + nodes,
+        "edges": edges
+    }
+    
+    print(f"[GEMINI] Converted: {len(final_graph['nodes'])} nodes, {len(final_graph['edges'])} edges")
+    return final_graph
