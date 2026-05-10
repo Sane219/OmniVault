@@ -22,14 +22,16 @@ def decode_token(request) -> str | None:
         sys.stderr.flush()
         return None
 
-    # Robyn headers can be tricky — convert to a plain dict and do a case-insensitive search
+    # Robyn headers - access directly by name, not by iterating
     auth_header = None
     try:
-        headers_dict = dict(request.headers)
-        for key, value in headers_dict.items():
-            if key.lower() == "authorization":
-                auth_header = value
-                break
+        # Try direct access first (works for Robyn)
+        auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
+        
+        if not auth_header:
+            # Try to get from headers dict if direct access fails
+            headers_dict = dict(request.headers)
+            auth_header = headers_dict.get("Authorization") or headers_dict.get("authorization")
     except Exception as e:
         sys.stderr.write(f"ERROR: Failed to read request headers: {e}\n")
         sys.stderr.flush()
