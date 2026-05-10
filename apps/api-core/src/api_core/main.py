@@ -13,7 +13,7 @@ from api_core.routes.chat import chat_router  # noqa: E402
 app = Robyn(__file__)
 app.include_router(auth_router)
 app.include_router(upload_router)
-app.include_router(user_router, prefix="/user")
+app.include_router(user_router)
 app.include_router(document_router)
 app.include_router(chat_router)
 
