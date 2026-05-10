@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from robyn import Robyn  # noqa: E402
+from robyn import Robyn, ALLOW_CORS  # noqa: E402
 from api_core.routes.auth import auth_router  # noqa: E402
 from api_core.routes.upload import upload_router  # noqa: E402
 from api_core.routes.user import user_router  # noqa: E402
@@ -11,6 +11,7 @@ from api_core.routes.document import document_router  # noqa: E402
 from api_core.routes.chat import chat_router  # noqa: E402
 
 app = Robyn(__file__)
+ALLOW_CORS(app, origins=["*"])
 app.include_router(auth_router)
 app.include_router(upload_router)
 app.include_router(user_router)

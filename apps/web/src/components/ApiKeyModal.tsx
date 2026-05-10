@@ -20,7 +20,7 @@ export function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
     setStatus('idle')
     
     try {
-      const res = await fetch('/api/user/api-key', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/api-key`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key: apiKey })

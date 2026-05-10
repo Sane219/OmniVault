@@ -89,7 +89,7 @@ export default function WorkspacePage() {
   const fetchHistory = useCallback(async () => {
     setHistoryLoading(true)
     try {
-      const res = await fetch('/api/documents', { headers: authHeaders() })
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/documents`, { headers: authHeaders() })
       if (!res.ok) throw new Error('Failed to load history')
       const data = await res.json()
       setHistory(data.documents ?? [])
@@ -102,7 +102,7 @@ export default function WorkspacePage() {
 
   const fetchGraph = useCallback(async (documentId: string) => {
     try {
-      const res = await fetch(`/api/document/${documentId}/graph`, { headers: authHeaders() })
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/document/${documentId}/graph`, { headers: authHeaders() })
       if (!res.ok) throw new Error(`Failed to fetch graph (${res.status})`)
       const data = await res.json()
       setGraphData(data)
@@ -119,7 +119,7 @@ export default function WorkspacePage() {
     stopPolling()
     pollIntervalRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/document/${documentId}/status`, { headers: authHeaders() })
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/document/${documentId}/status`, { headers: authHeaders() })
         if (!res.ok) throw new Error(`Status check failed (${res.status})`)
         const data = await res.json()
 
@@ -172,7 +172,7 @@ export default function WorkspacePage() {
     formData.append('file', file)
 
     try {
-      const res = await fetch('/api/upload', { method: 'POST', headers: authHeaders(), body: formData })
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/upload`, { method: 'POST', headers: authHeaders(), body: formData })
       if (!res.ok) throw new Error(`Upload failed (${res.status})`)
 
       const data = await res.json()
