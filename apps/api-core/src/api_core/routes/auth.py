@@ -10,6 +10,9 @@ auth_router = SubRouter(__name__)
 async def register(request):
     try:
         body = json.loads(request.body)
+        body_str = request.body.decode() if isinstance(request.body, bytes) else str(request.body)
+        print(f"REGISTER REQUEST BODY: {body_str}")
+        
         email = body.get("email")
         password = body.get("password")
 
@@ -20,7 +23,9 @@ async def register(request):
                 description=json.dumps({"error": "Email and password required"}),
             )
 
+        print(f"REGISTER: Calling Supabase with email={email}, password=***")
         res = supabase_auth.auth.sign_up({"email": email, "password": password})
+        print(f"REGISTER RESPONSE: user={res.user is not None}, session={getattr(res, 'session', None) is not None}")
 
         if res.user:
             session = getattr(res, "session", None)
@@ -42,12 +47,19 @@ async def register(request):
                 headers={"Content-Type": "application/json"},
                 description=json.dumps({"error": "Failed to create user"}),
             )
-    except Exception as e:
+    except Exception:
         print(f"REGISTER EXCEPTION: {traceback.format_exc()}")
+        err_msg = str(traceback.format_exc())
+        if "already been registered" in err_msg.lower():
+            return Response(
+                status_code=409,
+                headers={"Content-Type": "application/json"},
+                description=json.dumps({"error": "User already registered"}),
+            )
         return Response(
             status_code=500,
             headers={"Content-Type": "application/json"},
-            description=json.dumps({"error": str(e)}),
+            description=json.dumps({"error": str(traceback.format_exc())}),
         )
 
 
