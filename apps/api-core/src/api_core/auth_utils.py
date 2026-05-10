@@ -4,8 +4,6 @@ Shared authentication utilities for OmniVault API Core.
 import jwt
 import os
 import sys
-import json
-import base64
 
 SUPABASE_JWT_SECRET = os.environ.get("SUPABASE_JWT_SECRET")
 
@@ -36,23 +34,12 @@ def decode_token(request) -> str | None:
         parts = auth_header.split(" ")
         token = parts[1]
         
-        # Decode JWT header to find algorithm
-        try:
-            header_b64 = token.split('.')[0]
-            # Add padding if needed
-            padding = 4 - len(header_b64) % 4
-            if padding != 4:
-                header_b64 += '=' * padding
-            header = json.loads(base64.urlsafe_b64decode(header_b64))
-            alg = header.get("alg", "HS256")
-        except Exception:
-            alg = "HS256"  # Default fallback
-
-        # Verify with the correct algorithm
+        # Most Supabase projects use HS256 with custom JWT secret
+        # Only use HS256 since SUPABASE_JWT_SECRET is an HMAC key, not RSA private key
         decoded = jwt.decode(
             token,
             SUPABASE_JWT_SECRET,
-            algorithms=[alg],
+            algorithms=["HS256"],
             options={"verify_aud": False}
         )
         
