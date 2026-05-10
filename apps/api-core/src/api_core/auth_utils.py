@@ -34,14 +34,26 @@ def decode_token(request) -> str | None:
         parts = auth_header.split(" ")
         token = parts[1]
         
-        # Most Supabase projects use HS256 with custom JWT secret
-        # Only use HS256 since SUPABASE_JWT_SECRET is an HMAC key, not RSA private key
-        decoded = jwt.decode(
-            token,
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            options={"verify_aud": False}
-        )
+        # Try HS256 first (for custom JWT secret), fallback to RS256 (Supabase default)
+        # Supabase can issue either depending on project config
+        decoded = None
+        for alg in ["HS256", "RS256"]:
+            try:
+                decoded = jwt.decode(
+                    token,
+                    SUPABASE_JWT_SECRET,
+                    algorithms=[alg],
+                    options={"verify_aud": False}
+                )
+                break
+            except jwt.exceptions.InvalidSignatureError:
+                continue
+            except Exception:
+                continue
+        
+        if decoded is None:
+            sys.stderr.write("ERROR: JWT verification failed with all algorithms\n")
+            return None
         
         user_id = decoded.get("sub")
         return user_id
