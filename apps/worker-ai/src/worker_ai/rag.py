@@ -14,12 +14,19 @@ def extract_document_structure(file_path: str) -> str:
     """
     content = None
     
+    print(f"[RAG] Checking file_path: {file_path[:50]}...")
+    
     if file_path.startswith("http"):
         # Download from URL (Supabase Storage)
-        print(f"[RAG] Downloading file from URL: {file_path[:50]}...")
+        print("[RAG] Downloading file from URL...")
         try:
-            with urllib.request.urlopen(file_path) as response:
+            req = urllib.request.Request(
+                file_path,
+                headers={'User-Agent': 'Mozilla/5.0'}
+            )
+            with urllib.request.urlopen(req, timeout=30) as response:
                 content = response.read()
+            print(f"[RAG] Downloaded {len(content)} bytes")
         except Exception as e:
             raise ValueError(f"Failed to download file from URL: {e}")
     else:
@@ -31,6 +38,8 @@ def extract_document_structure(file_path: str) -> str:
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
         tmp.write(content)
         tmp_path = tmp.name
+    
+    print(f"[RAG] Processing temp file: {tmp_path}")
     
     try:
         doc = fitz.open(tmp_path)
