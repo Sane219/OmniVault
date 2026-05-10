@@ -74,7 +74,7 @@ async def upload_file(request):
         
         result = (
             supabase.table("documents")
-            .insert({"owner_id": user_id, "file_path": file_path, "status": "UPLOADED"})
+            .insert({"owner_id": user_id, "status": "UPLOADED"})
             .execute()
         )
 
