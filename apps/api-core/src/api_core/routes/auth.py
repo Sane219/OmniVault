@@ -1,4 +1,5 @@
 import json
+import traceback
 from robyn import SubRouter, Response
 from api_core.db import supabase
 
@@ -45,6 +46,9 @@ async def register(request):
 async def login(request):
     try:
         body = json.loads(request.body)
+        body_str = request.body.decode() if isinstance(request.body, bytes) else str(request.body)
+        print(f"LOGIN REQUEST BODY: {body_str}")
+        
         email = body.get("email")
         password = body.get("password")
 
@@ -56,14 +60,16 @@ async def login(request):
             )
 
         res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        
+        print(f"LOGIN SUCCESS: user_id={res.user.id}, has_session={res.session is not None}")
 
         return Response(
             status_code=200,
             headers={"Content-Type": "application/json"},
             description=json.dumps({"access_token": res.session.access_token, "user": res.user.model_dump()}),
         )
-    except Exception as e:
-        print(f"Login failed: {e}")
+    except Exception:
+        print(f"LOGIN EXCEPTION: {traceback.format_exc()}")
         return Response(
             status_code=401,
             headers={"Content-Type": "application/json"},
