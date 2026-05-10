@@ -107,10 +107,19 @@ def generate_knowledge_graph(text: str, api_key: str) -> dict:
     topics = list(raw_graph.keys())
     
     for i, topic in enumerate(topics):
+        # Handle both int 1 and array [1] formats
+        page = raw_graph[topic]
+        if isinstance(page, list):
+            page = page[0] if page else 1
+        elif isinstance(page, int):
+            page = page
+        else:
+            page = 1
+        
         nodes.append({
             "id": topic,
             "label": topic,
-            "page": raw_graph[topic][0] if raw_graph[topic] else 1
+            "page": page
         })
         if i > 0:
             edges.append({
