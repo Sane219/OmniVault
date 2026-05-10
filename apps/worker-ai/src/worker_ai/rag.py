@@ -85,10 +85,12 @@ def generate_knowledge_graph(text: str, api_key: str) -> dict:
         response_text = response.text.strip()
         print(f"[GEMINI] Raw response: {response_text[:300]}...")
         
-        # Fix: Replace single quotes with double quotes for valid JSON
-        response_text = response_text.replace("'", '"')
-        
-        raw_graph = json.loads(response_text)
+        # Try JSON first, fallback to Python dict literal_eval
+        try:
+            raw_graph = json.loads(response_text)
+        except json.JSONDecodeError:
+            import ast
+            raw_graph = ast.literal_eval(response_text)
     except json.JSONDecodeError:
         print(f"Error decoding JSON. Raw response: {response.text}")
         raise ValueError("Gemini did not return valid JSON")
