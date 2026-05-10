@@ -32,7 +32,7 @@ export function LoginForm() {
       }
       
       const data = await res.json()
-      const token = data.token || data.accessToken
+      const token = data.access_token  // backend returns snake_case
       
       setAccessToken(token)
       setUserEmail(email)
@@ -41,14 +41,7 @@ export function LoginForm() {
       
       router.push('/workspace')
     } catch (err) {
-      // DEV MOCK: If the backend isn't up, we still want to let the user see the workspace UI
-      console.warn("Backend not found or error occurred, using mock auth for demo purposes.")
-      const token = "mock_token_" + Date.now()
-      setAccessToken(token)
-      setUserEmail(email)
-      document.cookie = `omnivault_token=${token}; path=/; max-age=86400; SameSite=Strict`
-      router.push('/workspace')
-      // To re-enable strict errors: setError(err instanceof Error ? err.message : 'An error occurred')
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.')
     } finally {
       setLoading(false)
     }
