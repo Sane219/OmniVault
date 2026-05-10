@@ -49,6 +49,7 @@ async def register(request):
                 supabase.table("users").upsert({
                     "id": res.user.id,
                     "email": res.user.email,
+                    "password_hash": "supabase_auth",  # Placeholder - not used since Supabase handles auth
                 }, on_conflict="id").execute()
                 sys.stderr.write("REGISTER: user synced to local users table\n")
                 sys.stderr.flush()
@@ -133,6 +134,7 @@ async def login(request):
             supabase.table("users").upsert({
                 "id": res.user.id,
                 "email": res.user.email,
+                "password_hash": "supabase_auth",  # Placeholder - not used since Supabase handles auth
             }, on_conflict="id").execute()
             sys.stderr.write("LOGIN: user synced to local users table\n")
             sys.stderr.flush()
