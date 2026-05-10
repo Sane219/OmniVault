@@ -1,5 +1,6 @@
 import json
 import traceback
+import sys
 from robyn import SubRouter, Response
 from api_core.db import supabase_auth
 
@@ -8,6 +9,9 @@ auth_router = SubRouter(__name__)
 
 @auth_router.post("/register")
 async def register(request):
+    sys.stderr.write(f"REGISTER HIT: body={request.body[:200]}\n")
+    sys.stderr.flush()
+    
     try:
         body = json.loads(request.body)
         body_str = request.body.decode() if isinstance(request.body, bytes) else str(request.body)
@@ -23,9 +27,13 @@ async def register(request):
                 description=json.dumps({"error": "Email and password required"}),
             )
 
-        print(f"REGISTER: Calling Supabase.sign_up(email={email}, password=***)")
+        sys.stderr.write(f"REGISTER: Calling Supabase.sign_up(email={email}, password=***)\n")
+        sys.stderr.flush()
+        
         res = supabase_auth.auth.sign_up(email=email, password=password)
-        print(f"REGISTER RESPONSE: user={res.user is not None}, session={getattr(res, 'session', None) is not None}")
+        
+        sys.stderr.write(f"REGISTER RESPONSE: user={res.user is not None}, session={getattr(res, 'session', None) is not None}\n")
+        sys.stderr.flush()
 
         if res.user:
             session = getattr(res, "session", None)
@@ -65,10 +73,11 @@ async def register(request):
 
 @auth_router.post("/login")
 async def login(request):
+    sys.stderr.write(f"LOGIN HIT: body={request.body[:200]}\n")
+    sys.stderr.flush()
+    
     try:
         body = json.loads(request.body)
-        body_str = request.body.decode() if isinstance(request.body, bytes) else str(request.body)
-        print(f"LOGIN REQUEST BODY: {body_str}")
         
         email = body.get("email")
         password = body.get("password")
@@ -80,19 +89,25 @@ async def login(request):
                 description=json.dumps({"error": "Email and password required"}),
             )
 
-        print(f"LOGIN: Calling Supabase.sign_in_with_password(email={email}, password=***)")
+        sys.stderr.write(f"LOGIN: Calling Supabase.sign_in_with_password(email={email}, password=***)\n")
+        sys.stderr.flush()
+        
         res = supabase_auth.auth.sign_in_with_password(email=email, password=password)
-        print(f"LOGIN RESPONSE: session={res.session is not None if res.session else False}")
+        
+        sys.stderr.write(f"LOGIN RESPONSE: session={res.session is not None if res.session else False}\n")
+        sys.stderr.flush()
         
         if not res.session or not res.session.access_token:
-            print("LOGIN FAILED: No session (email confirmation pending?)")
+            sys.stderr.write("LOGIN FAILED: No session (email confirmation pending?)\n")
+            sys.stderr.flush()
             return Response(
                 status_code=400,
                 headers={"Content-Type": "application/json"},
                 description=json.dumps({"error": "Email not confirmed. Please check your inbox."}),
             )
         
-        print(f"LOGIN SUCCESS: user_id={res.user.id}, has_session=True")
+        sys.stderr.write(f"LOGIN SUCCESS: user_id={res.user.id}, has_session=True\n")
+        sys.stderr.flush()
 
         return Response(
             status_code=200,
@@ -100,7 +115,8 @@ async def login(request):
             description=json.dumps({"access_token": res.session.access_token, "user": res.user.model_dump()}),
         )
     except Exception:
-        print(f"LOGIN EXCEPTION: {traceback.format_exc()}")
+        sys.stderr.write(f"LOGIN EXCEPTION: {traceback.format_exc()}\n")
+        sys.stderr.flush()
         return Response(
             status_code=401,
             headers={"Content-Type": "application/json"},

@@ -8,6 +8,7 @@ Import `supabase_auth` from this module for Auth operations (anon key):
     from api_core.db import supabase_auth
 """
 import os
+import sys
 from supabase import create_client, Client
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
@@ -16,9 +17,9 @@ SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "") or os.getenv("SUPABASE_KE
 
 if not SUPABASE_ANON_KEY:
     SUPABASE_ANON_KEY = SUPABASE_SERVICE_KEY
-    print("WARNING: SUPABASE_ANON_KEY not set, falling back to service key for auth")
 
-print(f"DB.PY INIT: URL={SUPABASE_URL[:20]}..., SERVICE_KEY={'set' if SUPABASE_SERVICE_KEY else 'missing'}, ANON_KEY={'set' if SUPABASE_ANON_KEY else 'missing'}")
+sys.stderr.write(f"DB.PY INIT: URL={SUPABASE_URL[:30]}..., SERVICE_KEY={'set' if SUPABASE_SERVICE_KEY else 'missing'}, ANON_KEY={'set' if SUPABASE_ANON_KEY else 'missing'}\n")
+sys.stderr.flush()
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 supabase_auth: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
