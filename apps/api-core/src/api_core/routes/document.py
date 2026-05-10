@@ -74,6 +74,8 @@ async def get_document_status(request):
 async def get_document_graph(request):
     """
     Returns the knowledge graph JSON stored in Supabase for a completed document.
+    STRIPPS full_content from nodes before returning to frontend (JSONB payload protection).
+    Frontend only receives: id, title, level, page, content_summary, keywords, edges.
     """
     user_id = decode_token(request)
     if not user_id:
@@ -105,11 +107,13 @@ async def get_document_graph(request):
         if not doc.get("graph_data"):
             return _err(404, "Graph data missing from record")
 
-        # Supabase JSONB columns are returned as Python dicts/lists already
         graph = doc["graph_data"]
         if isinstance(graph, str):
             graph = json.loads(graph)
 
+        for node in graph.get("nodes", []):
+            node.pop("full_content", None)
+        
         return _ok(graph)
 
     except Exception as e:
