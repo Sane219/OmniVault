@@ -1,4 +1,3 @@
-import os
 import uuid
 import json
 import sys
@@ -10,17 +9,32 @@ from api_core.db import supabase
 upload_router = SubRouter(__name__)
 hatchet = Hatchet()
 
-LOCAL_STORAGE_DIR = "local_storage"
-os.makedirs(LOCAL_STORAGE_DIR, exist_ok=True)
+BUCKET_NAME = "documents"
 
 
-def _save_file(content: bytes) -> tuple[str, str]:
-    """Writes file bytes to local_storage and returns (filename, file_path)."""
-    filename = f"{uuid.uuid4()}.pdf"
-    file_path = os.path.join(LOCAL_STORAGE_DIR, filename)
-    with open(file_path, "wb") as f:
-        f.write(content)
-    return filename, file_path
+def _ensure_bucket():
+    """Ensure the documents bucket exists."""
+    try:
+        buckets = supabase.storage.list_buckets()
+        bucket_names = [b.name for b in buckets]
+        if BUCKET_NAME not in bucket_names:
+            supabase.storage.create_bucket(BUCKET_NAME, options={"public": True})
+            sys.stderr.write(f"Created bucket: {BUCKET_NAME}\n")
+    except Exception as e:
+        sys.stderr.write(f"Bucket check warning: {e}\n")
+
+
+def _upload_to_storage(content: bytes, user_id: str) -> str:
+    """Uploads file to Supabase Storage and returns the file path."""
+    _ensure_bucket()
+    
+    filename = f"{user_id}/{uuid.uuid4()}.pdf"
+    
+    supabase.storage.from_(BUCKET_NAME).upload(filename, content, {"content_type": "application/pdf"})
+    
+    # Get public URL
+    file_path = supabase.storage.from_(BUCKET_NAME).get_public_url(filename)
+    return file_path
 
 
 @upload_router.post("/upload")
@@ -49,18 +63,18 @@ async def upload_file(request):
                 description=json.dumps({"error": "No file uploaded"}),
             )
 
-        sys.stderr.write(f"UPLOAD: saving file for user {user_id}\n")
+        sys.stderr.write("UPLOAD: uploading to Supabase Storage\n")
         sys.stderr.flush()
         
-        filename, file_path = _save_file(file_content)
-
-        # ── Persist to Supabase ──────────────────────────────────────────────
+        # Upload to Supabase Storage (persistent)
+        file_path = _upload_to_storage(file_content, user_id)
+        
         sys.stderr.write("UPLOAD: inserting into documents table\n")
         sys.stderr.flush()
         
         result = (
             supabase.table("documents")
-            .insert({"owner_id": user_id, "status": "UPLOADED"})
+            .insert({"owner_id": user_id, "file_path": file_path, "status": "UPLOADED"})
             .execute()
         )
 
