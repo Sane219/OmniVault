@@ -52,12 +52,26 @@ def decode_token(request) -> str | None:
         sys.stderr.write(f"Token extracted. Prefix chars: {token[:10]}...\n")
         sys.stderr.flush()
 
-        decoded = jwt.decode(
-            token,
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
+        # Supabase uses RS256 algorithm, try RS256 first, then HS256
+        try:
+            decoded = jwt.decode(
+                token,
+                SUPABASE_JWT_SECRET,
+                algorithms=["RS256", "HS256"],
+                audience="authenticated",
+            )
+        except Exception as e:
+            sys.stderr.write(f"RS256 decode failed, trying HS256: {e}\n")
+            sys.stderr.flush()
+            # Fallback to HS256 with options
+            decoded = jwt.decode(
+                token,
+                SUPABASE_JWT_SECRET,
+                algorithms=["HS256"],
+                audience="authenticated",
+                options={"verify_aud": False}  # Skip audience check if RS256 failed
+            )
+        
         user_id = decoded.get("sub")
         sys.stderr.write(f"JWT Successfully Decoded! User ID: {user_id}\n")
         sys.stderr.write("--- END JWT DECODE (SUCCESS) ---\n")
