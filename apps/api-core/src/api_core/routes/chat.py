@@ -116,9 +116,9 @@ async def chat_with_document(request):
     Fetches graph_data + gemini_api_key via a joined Supabase query.
     """
     # ── Auth ──────────────────────────────────────────────────────────────────
-    user_id, err = decode_token(request)
-    if err:
-        return err
+    user_id = decode_token(request)
+    if not user_id:
+        return _err(401, "Unauthorized or invalid token")
 
     document_id = request.path_params.get("id")
     if not document_id:

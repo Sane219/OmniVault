@@ -33,9 +33,9 @@ async def get_document_status(request):
     Status values: UPLOADED | PROCESSING | COMPLETED | FAILED
     Also returns error_message when status is FAILED.
     """
-    user_id, err = decode_token(request)
-    if err:
-        return err
+    user_id = decode_token(request)
+    if not user_id:
+        return _err(401, "Unauthorized or invalid token")
 
     document_id = request.path_params.get("id")
     if not document_id:
@@ -75,9 +75,9 @@ async def get_document_graph(request):
     """
     Returns the knowledge graph JSON stored in Supabase for a completed document.
     """
-    user_id, err = decode_token(request)
-    if err:
-        return err
+    user_id = decode_token(request)
+    if not user_id:
+        return _err(401, "Unauthorized or invalid token")
 
     document_id = request.path_params.get("id")
     if not document_id:
@@ -123,9 +123,9 @@ async def list_documents(request):
     """
     Returns all documents belonging to the authenticated user, newest first.
     """
-    user_id, err = decode_token(request)
-    if err:
-        return err
+    user_id = decode_token(request)
+    if not user_id:
+        return _err(401, "Unauthorized or invalid token")
 
     try:
         result = (

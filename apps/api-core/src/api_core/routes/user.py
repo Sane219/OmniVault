@@ -9,9 +9,9 @@ user_router = SubRouter(__name__, prefix="/user")
 @user_router.post("/api-key")
 async def update_api_key(request):
     try:
-        user_id, err = decode_token(request)
-        if err:
-            return err
+        user_id = decode_token(request)
+        if not user_id:
+            return Response(status_code=401, headers={"Content-Type": "application/json"}, description='{"error": "Unauthorized or invalid token"}')
 
         body = json.loads(request.body)
         api_key = body.get("api_key")

@@ -25,9 +25,9 @@ def _save_file(content: bytes) -> tuple[str, str]:
 @upload_router.post("/upload")
 async def upload_file(request):
     # ── Auth ──────────────────────────────────────────────────────────────────
-    user_id, err = decode_token(request)
-    if err:
-        return err
+    user_id = decode_token(request)
+    if not user_id:
+        return Response(status_code=401, headers={"Content-Type": "application/json"}, description='{"error": "Unauthorized or invalid token"}')
 
     try:
         files = request.files
