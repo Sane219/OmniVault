@@ -23,8 +23,8 @@ async def register(request):
                 description=json.dumps({"error": "Email and password required"}),
             )
 
-        print(f"REGISTER: Calling Supabase with email={email}, password=***")
-        res = supabase_auth.auth.sign_up({"email": email, "password": password})
+        print(f"REGISTER: Calling Supabase.sign_up(email={email}, password=***)")
+        res = supabase_auth.auth.sign_up(email=email, password=password)
         print(f"REGISTER RESPONSE: user={res.user is not None}, session={getattr(res, 'session', None) is not None}")
 
         if res.user:
@@ -80,7 +80,9 @@ async def login(request):
                 description=json.dumps({"error": "Email and password required"}),
             )
 
-        res = supabase_auth.auth.sign_in_with_password({"email": email, "password": password})
+        print(f"LOGIN: Calling Supabase.sign_in_with_password(email={email}, password=***)")
+        res = supabase_auth.auth.sign_in_with_password(email=email, password=password)
+        print(f"LOGIN RESPONSE: session={res.session is not None if res.session else False}")
         
         if not res.session or not res.session.access_token:
             print("LOGIN FAILED: No session (email confirmation pending?)")
