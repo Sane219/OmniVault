@@ -13,7 +13,7 @@ from api_core.routes.chat import chat_router  # noqa: E402
 app = Robyn(__file__)
 ALLOW_CORS(app, origins=["*"])
 
-@app.options("/*")
+@app.options("/*extra")
 async def handle_options(request: Request):
     return Response(
         status_code=204,
