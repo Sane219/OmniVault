@@ -19,7 +19,7 @@ export function RegisterForm() {
     setError('')
     
     try {
-      const res = await fetch('/api/register', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password })
@@ -32,10 +32,7 @@ export function RegisterForm() {
       // On success, redirect to login
       router.push('/login?registered=true')
     } catch (err) {
-      // DEV MOCK: If the backend isn't up, we still want to let the user see the UI flow
-      console.warn("Backend not found or error occurred, using mock auth for demo purposes.")
-      router.push('/login?registered=true')
-      // To re-enable strict errors: setError(err instanceof Error ? err.message : 'An error occurred')
+      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.')
     } finally {
       setLoading(false)
     }

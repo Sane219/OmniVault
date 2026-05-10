@@ -4,11 +4,12 @@ import jwt
 import datetime
 from robyn import SubRouter, Response
 from api_core.db import supabase
+import os
 
 auth_router = SubRouter(__name__)
 
-JWT_SECRET = "super_secret_key_change_in_production"
-REFRESH_SECRET = "super_secret_refresh_key_change_in_production"
+SUPABASE_JWT_SECRET = os.environ.get("SUPABASE_JWT_SECRET", "super_secret_key_change_in_production")
+REFRESH_SECRET = os.environ.get("REFRESH_SECRET", "super_secret_refresh_key_change_in_production")
 
 
 @auth_router.post("/register")
@@ -104,9 +105,10 @@ async def login(request):
         access_payload = {
             "sub": user["id"],
             "email": email,
+            "aud": "authenticated",
             "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=15),
         }
-        access_token = jwt.encode(access_payload, JWT_SECRET, algorithm="HS256")
+        access_token = jwt.encode(access_payload, SUPABASE_JWT_SECRET, algorithm="HS256")
 
         # Generate Refresh Token (7 days)
         refresh_payload = {

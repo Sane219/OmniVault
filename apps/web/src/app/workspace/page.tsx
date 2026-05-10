@@ -78,6 +78,16 @@ export default function WorkspacePage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  const router = useRef<any>(null) // Use router if available or redirect manually
+
+  // ── Auth Guard ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const token = document.cookie.match(/omnivault_token=([^;]+)/)
+    if (!token) {
+      window.location.href = '/login'
+    }
+  }, [])
+
   // ── Helpers ─────────────────────────────────────────────────────────────────
   const stopPolling = useCallback(() => {
     if (pollIntervalRef.current) {
