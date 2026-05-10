@@ -1,17 +1,53 @@
 import fitz
 import json
+import os
+import tempfile
+import urllib.request
 from google import genai
 from google.genai import types
 
+
 def extract_document_structure(file_path: str) -> str:
-    """Extract raw text and structure it hierarchically page-by-page."""
-    doc = fitz.open(file_path)
-    structured_text = []
-    for page_num in range(len(doc)):
-        page = doc.load_page(page_num)
-        text = page.get_text()
-        structured_text.append(f"Page {page_num + 1}:\n{text}")
-    return "\n\n".join(structured_text)
+    """
+    Extract raw text and structure it hierarchically page-by-page.
+    Handles both local file paths and URLs.
+    """
+    content = None
+    
+    if file_path.startswith("http"):
+        # Download from URL (Supabase Storage)
+        print(f"[RAG] Downloading file from URL: {file_path[:50]}...")
+        try:
+            with urllib.request.urlopen(file_path) as response:
+                content = response.read()
+        except Exception as e:
+            raise ValueError(f"Failed to download file from URL: {e}")
+    else:
+        # Local file
+        with open(file_path, "rb") as f:
+            content = f.read()
+    
+    # Create a temporary file to process
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+    
+    try:
+        doc = fitz.open(tmp_path)
+        structured_text = []
+        for page_num in range(len(doc)):
+            page = doc.load_page(page_num)
+            text = page.get_text()
+            structured_text.append(f"Page {page_num + 1}:\n{text}")
+        doc.close()
+        return "\n\n".join(structured_text)
+    finally:
+        # Clean up temporary file
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+
 
 def generate_knowledge_graph(text: str, api_key: str) -> dict:
     """Generate a structured knowledge graph using Gemini with the user's API key."""
