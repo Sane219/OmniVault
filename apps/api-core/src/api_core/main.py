@@ -11,7 +11,7 @@ from api_core.routes.document import document_router  # noqa: E402
 from api_core.routes.chat import chat_router  # noqa: E402
 
 app = Robyn(__file__)
-ALLOW_CORS(app, origins=["*"], allow_headers=["*"], allow_methods=["*"], allow_credentials=True)
+ALLOW_CORS(app, origins=["*"])
 
 @app.options("/*")
 async def handle_options(request: Request):
