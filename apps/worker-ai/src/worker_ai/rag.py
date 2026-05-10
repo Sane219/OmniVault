@@ -91,6 +91,12 @@ def generate_knowledge_graph(text: str, api_key: str) -> dict:
         except json.JSONDecodeError:
             import ast
             raw_graph = ast.literal_eval(response_text)
+        
+        # Handle nested format {"entities": {...}} or flat {...}
+        if isinstance(raw_graph, dict) and "entities" in raw_graph:
+            raw_graph = raw_graph["entities"]
+        if not isinstance(raw_graph, dict) or len(raw_graph) == 0:
+            raise ValueError(f"Invalid graph format: {raw_graph}")
     except json.JSONDecodeError:
         print(f"Error decoding JSON. Raw response: {response.text}")
         raise ValueError("Gemini did not return valid JSON")
