@@ -1,3 +1,13 @@
+---
+title: OmniVault
+emoji: 🧠
+colorFrom: purple
+colorTo: green
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # OmniVault
 
 OmniVault is an enterprise-grade multimodal AI SaaS platform. 
@@ -55,14 +65,3 @@ To run the Next.js frontend locally:
 cd apps/web
 pnpm dev
 ```
----
-title: OmniVault Backend
-emoji: 🧠
-colorFrom: purple
-colorTo: green
-sdk: docker
-app_port: 7860
-pinned: false
----
-
-OmniVault backend for API + worker deployment on Hugging Face Spaces.
