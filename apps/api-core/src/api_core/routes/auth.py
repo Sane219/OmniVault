@@ -2,7 +2,7 @@ import json
 import traceback
 import sys
 from robyn import SubRouter, Response
-from api_core.db import supabase_auth
+from api_core.db import supabase_auth, supabase
 
 auth_router = SubRouter(__name__)
 
@@ -43,6 +43,18 @@ async def register(request):
                 "email": res.user.email,
                 "created_at": res.user.created_at.isoformat() if res.user.created_at else None,
             }
+            
+            # Ensure user exists in local users table (for foreign key)
+            try:
+                supabase.table("users").upsert({
+                    "id": res.user.id,
+                    "email": res.user.email,
+                }, on_conflict="id").execute()
+                sys.stderr.write("REGISTER: user synced to local users table\n")
+                sys.stderr.flush()
+            except Exception as e:
+                sys.stderr.write(f"REGISTER: user sync warning: {e}\n")
+                sys.stderr.flush()
             
             if session and session.access_token:
                 return Response(
@@ -115,6 +127,18 @@ async def login(request):
         
         sys.stderr.write(f"LOGIN SUCCESS: user_id={res.user.id}, has_session=True\n")
         sys.stderr.flush()
+
+        # Ensure user exists in local users table (for foreign key)
+        try:
+            supabase.table("users").upsert({
+                "id": res.user.id,
+                "email": res.user.email,
+            }, on_conflict="id").execute()
+            sys.stderr.write("LOGIN: user synced to local users table\n")
+            sys.stderr.flush()
+        except Exception as e:
+            sys.stderr.write(f"LOGIN: user sync warning: {e}\n")
+            sys.stderr.flush()
 
         user_dict = {
             "id": res.user.id,
