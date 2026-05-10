@@ -1,14 +1,7 @@
 "use client"
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Send, Bot, User, X, Loader2, MessageSquare, AlertTriangle } from 'lucide-react'
-import { useStore } from '../store/useStore'
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  isError?: boolean;
-}
+import { useStore, ChatMessage } from '../store/useStore'
 
 function authHeaders(): HeadersInit {
   const match = document.cookie.match(/omnivault_token=([^;]+)/)
@@ -29,13 +22,22 @@ function parseSSEChunk(raw: string): string {
 }
 
 export function ChatPanel() {
-  const { activeDocument, selectedNode, setSelectedNode } = useStore()
-  const [messages, setMessages] = useState<Message[]>([])
+  const { activeDocument, selectedNode, setSelectedNode, chatMessages, clearChatMessages } = useStore()
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
+  const prevDocRef = useRef<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+
+  // Sync local messages with store when document changes
+  useEffect(() => {
+    if (activeDocument !== prevDocRef.current) {
+      prevDocRef.current = activeDocument
+      setMessages([])
+    }
+  }, [activeDocument])
 
   useEffect(() => {
     if (scrollRef.current) {
