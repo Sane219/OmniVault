@@ -27,10 +27,10 @@ async def register(request):
                 description=json.dumps({"error": "Email and password required"}),
             )
 
-        sys.stderr.write(f"REGISTER: Calling Supabase.sign_up(email={email}, password=***)\n")
+        sys.stderr.write("REGISTER: Calling Supabase.sign_up with dict\n")
         sys.stderr.flush()
         
-        res = supabase_auth.auth.sign_up(email=email, password=password)
+        res = supabase_auth.auth.sign_up({"email": email, "password": password})
         
         sys.stderr.write(f"REGISTER RESPONSE: user={res.user is not None}, session={getattr(res, 'session', None) is not None}\n")
         sys.stderr.flush()
@@ -89,10 +89,10 @@ async def login(request):
                 description=json.dumps({"error": "Email and password required"}),
             )
 
-        sys.stderr.write(f"LOGIN: Calling Supabase.sign_in_with_password(email={email}, password=***)\n")
+        sys.stderr.write("LOGIN: Calling Supabase.sign_in_with_password with dict\n")
         sys.stderr.flush()
         
-        res = supabase_auth.auth.sign_in_with_password(email=email, password=password)
+        res = supabase_auth.auth.sign_in_with_password({"email": email, "password": password})
         
         sys.stderr.write(f"LOGIN RESPONSE: session={res.session is not None if res.session else False}\n")
         sys.stderr.flush()
