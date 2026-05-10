@@ -60,6 +60,8 @@ def extract_document_structure(file_path: str) -> str:
 
 def generate_knowledge_graph(text: str, api_key: str) -> dict:
     """Generate a structured knowledge graph using Gemini with the user's API key."""
+    print(f"[GEMINI] Input text length: {len(text)} chars")
+    
     client = genai.Client(api_key=api_key)
     
     system_instruction = (
@@ -75,9 +77,11 @@ def generate_knowledge_graph(text: str, api_key: str) -> dict:
     
     response = client.models.generate_content(
         model='gemini-2.5-flash',
-        contents=text,
+        contents=text[:5000],  # Limit text to first 5000 chars
         config=config
     )
+    
+    print(f"[GEMINI] Raw response: {response.text[:200]}...")
     
     try:
         return json.loads(response.text)
