@@ -61,9 +61,9 @@ export function ChatPanel() {
     const controller = new AbortController()
     abortRef.current = controller
 
-    const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: text }
+    const userMsg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: text }
     const aiMsgId = crypto.randomUUID()
-    const aiMsg: Message = { id: aiMsgId, role: 'assistant', content: '' }
+    const aiMsg: ChatMessage = { id: aiMsgId, role: 'assistant', content: '' }
 
     setMessages((prev) => [...prev, userMsg, aiMsg])
     setInput('')
