@@ -37,17 +37,24 @@ async def register(request):
 
         if res.user:
             session = getattr(res, "session", None)
+            
+            user_dict = {
+                "id": res.user.id,
+                "email": res.user.email,
+                "created_at": res.user.created_at.isoformat() if res.user.created_at else None,
+            }
+            
             if session and session.access_token:
                 return Response(
                     status_code=201,
                     headers={"Content-Type": "application/json"},
-                    description=json.dumps({"access_token": session.access_token, "user": res.user.model_dump()}),
+                    description=json.dumps({"access_token": session.access_token, "user": user_dict}),
                 )
             else:
                 return Response(
                     status_code=201,
                     headers={"Content-Type": "application/json"},
-                    description=json.dumps({"message": "Registration successful. Please check your email to confirm account.", "user": res.user.model_dump()}),
+                    description=json.dumps({"message": "Registration successful. Please check your email to confirm account.", "user": user_dict}),
                 )
         else:
             return Response(
@@ -109,10 +116,16 @@ async def login(request):
         sys.stderr.write(f"LOGIN SUCCESS: user_id={res.user.id}, has_session=True\n")
         sys.stderr.flush()
 
+        user_dict = {
+            "id": res.user.id,
+            "email": res.user.email,
+            "created_at": res.user.created_at.isoformat() if res.user.created_at else None,
+        }
+
         return Response(
             status_code=200,
             headers={"Content-Type": "application/json"},
-            description=json.dumps({"access_token": res.session.access_token, "user": res.user.model_dump()}),
+            description=json.dumps({"access_token": res.session.access_token, "user": user_dict}),
         )
     except Exception:
         sys.stderr.write(f"LOGIN EXCEPTION: {traceback.format_exc()}\n")
