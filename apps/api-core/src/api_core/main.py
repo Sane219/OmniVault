@@ -13,6 +13,13 @@ from api_core.routes.chat import chat_router  # noqa: E402
 app = Robyn(__file__)
 ALLOW_CORS(app, origins=["*"])
 
+@app.before_request()
+async def skip_options_middleware(request: Request):
+    """Short-circuit OPTIONS preflight requests — never attempt auth on them."""
+    if request.method == "OPTIONS":
+        return request
+    return request
+
 @app.options("/*extra")
 async def handle_options(request: Request):
     return Response(
