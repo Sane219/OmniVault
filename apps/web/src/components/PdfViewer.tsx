@@ -1,15 +1,6 @@
 "use client"
-import { useState, useCallback } from "react"
-import dynamic from "next/dynamic"
-import { pdfjs, Document, Page } from "react-pdf"
-import "react-pdf/dist/esm/Page/AnnotationLayer.css"
-import "react-pdf/dist/esm/Page/TextLayer.css"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { ChevronLeft, ChevronRight, Loader2, AlertCircle } from "lucide-react"
-
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url
-).toString()
 
 interface PdfViewerProps {
   url: string
@@ -20,6 +11,30 @@ function PdfViewerInner({ url }: PdfViewerProps) {
   const [pageNumber, setPageNumber] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [PdfComp, setPdfComp] = useState<{
+    Document: React.ComponentType<any>
+    Page: React.ComponentType<any>
+  } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const reactPdf = await import("react-pdf")
+        const pdfjs = reactPdf.pdfjs
+        pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`
+        if (!cancelled) {
+          setPdfComp({ Document: reactPdf.Document, Page: reactPdf.Page })
+          // Import CSS
+          await import("react-pdf/dist/Page/AnnotationLayer.css")
+          await import("react-pdf/dist/Page/TextLayer.css")
+        }
+      } catch (e) {
+        if (!cancelled) setError("Failed to load PDF viewer")
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   const onDocumentLoadSuccess = useCallback(
     ({ numPages: total }: { numPages: number }) => {
@@ -69,8 +84,13 @@ function PdfViewerInner({ url }: PdfViewerProps) {
             <AlertCircle className="w-10 h-10 opacity-60" />
             <p className="text-sm font-mono">{error}</p>
           </div>
+        ) : !PdfComp ? (
+          <div className="flex items-center gap-2 text-gray-500 mt-12">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-sm font-mono">Loading PDF viewer...</span>
+          </div>
         ) : (
-          <Document
+          <PdfComp.Document
             file={url}
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={onDocumentLoadError}
@@ -81,24 +101,17 @@ function PdfViewerInner({ url }: PdfViewerProps) {
               </div>
             }
           >
-            <Page
+            <PdfComp.Page
               pageNumber={pageNumber}
               renderTextLayer={false}
               renderAnnotationLayer={false}
               className="shadow-lg shadow-black/40 rounded"
             />
-          </Document>
+          </PdfComp.Document>
         )}
       </div>
     </div>
   )
 }
 
-export const PdfViewer = dynamic(() => Promise.resolve(PdfViewerInner), {
-  ssr: false,
-  loading: () => (
-    <div className="flex items-center justify-center h-full text-gray-600">
-      <Loader2 className="w-6 h-6 animate-spin" />
-    </div>
-  ),
-})
+export { PdfViewerInner as PdfViewer }
