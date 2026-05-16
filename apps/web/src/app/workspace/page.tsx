@@ -168,7 +168,7 @@ export default function WorkspacePage() {
     ws.onclose = () => {
       wsRef.current = null
     }
-  }, [closeWs, fetchGraph, fetchHistory])
+  }, [closeWs, fetchGraph, fetchHistory, startPollingFallback])
 
   // Fallback polling if WebSocket fails
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)

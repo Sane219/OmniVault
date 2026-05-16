@@ -5,9 +5,7 @@ Instead of client-side polling, the server pushes status changes to the client.
 Uses Supabase polling (1s interval) as the backend mechanism.
 """
 import asyncio
-import json
 from api_core.db import supabase
-from api_core.auth_utils import decode_token
 
 # Registered on the app in main.py via register_ws_routes(app)
 
