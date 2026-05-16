@@ -9,6 +9,7 @@ dependencies = [
     "hatchet-sdk",
     "python-dotenv>=1.2.2",
     "supabase>=2.30.0",
+    "cryptography>=42.0.0",
 ]
 
 [build-system]
@@ -23,3 +24,6 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/api_core"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

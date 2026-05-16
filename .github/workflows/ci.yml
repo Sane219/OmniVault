@@ -2,34 +2,143 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test-python:
+  # ── Python Lint ─────────────────────────────────────────────────────────────
+  lint-python:
+    name: Lint Python
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
-      - name: Test API Core
-        run: cd apps/api-core && uv run pytest
-      - name: Test Worker AI
-        run: cd apps/worker-ai && uv run pytest
+        uses: astral-sh/setup-uv@v4
+      - name: Lint api-core
+        working-directory: apps/api-core
+        run: |
+          uv sync --group dev
+          uv run ruff check src/ --output-format=github
+      - name: Lint worker-ai
+        working-directory: apps/worker-ai
+        run: |
+          uv sync --group dev
+          uv run ruff check src/ --output-format=github
 
-  test-frontend:
+  # ── Python Tests ────────────────────────────────────────────────────────────
+  test-python:
+    name: Test Python
+    runs-on: ubuntu-latest
+    needs: lint-python
+    env:
+      ENCRYPTION_KEY: QGQLFwZJhYSeyDG8sED8Wl80_RyIZpZ1nYmAE1M07Og=
+      SUPABASE_JWT_SECRET: test-secret-for-unit-tests
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+      - name: Test api-core
+        working-directory: apps/api-core
+        run: |
+          uv sync --group dev
+          uv run pytest tests/ -v --tb=short
+      - name: Test worker-ai
+        working-directory: apps/worker-ai
+        run: |
+          uv sync --group dev
+          uv run pytest tests/ -v --tb=short
+
+  # ── Frontend Lint + Type Check ──────────────────────────────────────────────
+  lint-frontend:
+    name: Lint Frontend
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 10
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'pnpm'
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
       - name: Install dependencies
-        run: cd apps/web && pnpm install
-      - name: Test Frontend
-        run: cd apps/web && pnpm run test
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
+      - name: Type check
+        working-directory: apps/web
+        run: pnpm tsc --noEmit
+      - name: ESLint
+        working-directory: apps/web
+        run: pnpm lint
+
+  # ── Frontend Tests ─────────────────────────────────────────────────────────
+  test-frontend:
+    name: Test Frontend
+    runs-on: ubuntu-latest
+    needs: lint-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - name: Install dependencies
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
+      - name: Run tests
+        working-directory: apps/web
+        run: pnpm test
+
+  # ── Frontend Build ─────────────────────────────────────────────────────────
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    needs: [lint-frontend, test-frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - name: Install dependencies
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        working-directory: apps/web
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_BACKEND_URL: http://localhost:8080
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+
+  # ── Security Audit ─────────────────────────────────────────────────────────
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - name: Audit npm packages
+        working-directory: apps/web
+        run: pnpm audit --audit-level high || true

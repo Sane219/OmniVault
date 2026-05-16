@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://github.com/Sane219/OmniVault/blob/main/docs/architecture.md
+    about: Read the architecture docs before opening an issue
+  - name: Security Contact
+    url: https://github.com/Sane219/OmniVault/security/advisories/new
+    about: For critical security vulnerabilities, use GitHub's private vulnerability reporting

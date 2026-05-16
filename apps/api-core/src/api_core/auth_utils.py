@@ -12,10 +12,6 @@ def decode_token(request) -> str | None:
     """
     Extracts and validates the Bearer JWT from the Authorization header.
     Returns the user_id (string) on success, or None on failure.
-    
-    Note: Signature verification is skipped because SUPABASE_JWT_SECRET
-    in HF Space may not match Supabase's internal signing key.
-    The token is still validated because login succeeded with Supabase.
     """
     if not SUPABASE_JWT_SECRET:
         sys.stderr.write("ERROR: SUPABASE_JWT_SECRET is MISSING\n")
@@ -37,19 +33,23 @@ def decode_token(request) -> str | None:
     try:
         parts = auth_header.split(" ")
         token = parts[1]
-        
-        # Decode without signature verification since JWT secret may not match
-        # Login already verified credentials with Supabase, so token is valid
+
         decoded = jwt.decode(
             token,
             SUPABASE_JWT_SECRET,
-            algorithms=["HS256", "RS256"],
-            options={"verify_signature": False, "verify_aud": False, "verify_exp": False}
+            algorithms=["HS256"],
+            options={"verify_signature": True, "verify_aud": False, "verify_exp": True}
         )
-        
+
         user_id = decoded.get("sub")
         return user_id
-    
+
+    except jwt.ExpiredSignatureError:
+        sys.stderr.write("ERROR: JWT token expired\n")
+        return None
+    except jwt.InvalidSignatureError:
+        sys.stderr.write("ERROR: JWT signature verification failed\n")
+        return None
     except Exception as e:
         sys.stderr.write(f"ERROR: JWT decode failed: {e}\n")
         return None

@@ -1,0 +1,72 @@
+name: Feature Request
+description: Suggest a new feature or improvement for OmniVault
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We love hearing ideas that make OmniVault better. Please describe your feature request in detail.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? Describe the pain point.
+      placeholder: "When analyzing large documents (500+ pages), I have to wait several minutes with no feedback on progress. This makes it hard to know if the system is still working."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the feature or change you'd like to see.
+      placeholder: "Add a real-time progress bar that shows which extraction step is running (text extraction, graph generation, embedding) with percentage completion."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or workarounds?
+      placeholder: "I tried refreshing the page, but that restarts processing from scratch."
+    validations:
+      required: false
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Feature Area
+      description: Which part of OmniVault does this relate to?
+      multiple: true
+      options:
+        - Document Processing
+        - Knowledge Graph Visualization
+        - Chat / RAG
+        - PDF Viewer
+        - Authentication & Security
+        - Performance & Caching
+        - API / Integrations
+        - UI / UX
+        - Other
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      description: How many users would benefit from this?
+      options:
+        - Nice to have (improves experience)
+        - Important (significantly improves workflow)
+        - Critical (blocks a key use case)
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Mockups, screenshots, related issues, or any other context.
+    validations:
+      required: false

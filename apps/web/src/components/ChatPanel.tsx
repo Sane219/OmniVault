@@ -2,12 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Send, Bot, User, X, Loader2, MessageSquare, AlertTriangle } from 'lucide-react'
 import { useStore, ChatMessage } from '../store/useStore'
-
-function authHeaders(): HeadersInit {
-  const match = document.cookie.match(/omnivault_token=([^;]+)/)
-  const token = match ? match[1] : ''
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
+import { authHeaders } from '../lib/auth'
 
 /**
  * Parses SSE-formatted text: "data: <text>\n\n"

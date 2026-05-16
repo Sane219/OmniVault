@@ -3,6 +3,7 @@ import asyncio
 from robyn import SubRouter, Response, SSEResponse, SSEMessage
 from api_core.auth_utils import decode_token
 from api_core.db import supabase
+from api_core.crypto_utils import decrypt_value, is_encrypted
 
 try:
     from google import genai
@@ -161,6 +162,13 @@ async def chat_with_document(request):
 
         if not api_key:
             return _err(400, "No Gemini API key configured. Please add one in Settings.")
+
+        # Decrypt API key if it's encrypted
+        if is_encrypted(api_key):
+            try:
+                api_key = decrypt_value(api_key)
+            except Exception:
+                return _err(500, "Failed to decrypt API key. Please re-enter your API key in Settings.")
 
         graph_data = doc["graph_data"]
         if isinstance(graph_data, str):

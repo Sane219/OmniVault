@@ -9,6 +9,10 @@ import { useStore } from '../../store/useStore'
 import { ApiKeyModal } from '../../components/ApiKeyModal'
 import { KnowledgeGraph } from '../../components/KnowledgeGraph'
 import { ChatPanel } from '../../components/ChatPanel'
+import { PdfViewer } from '../../components/PdfViewer'
+import { authHeaders } from '../../lib/auth'
+import { DocumentListSkeleton, GraphSkeleton } from '../../components/Skeleton'
+import { ErrorBoundary } from '../../components/ErrorBoundary'
 
 const POLL_INTERVAL_MS = 2000
 
@@ -20,14 +24,6 @@ interface DocumentRecord {
   status: string
   error_message?: string
   created_at?: string
-}
-
-// ── Auth header helper ────────────────────────────────────────────────────────
-function authHeaders(): HeadersInit {
-  // Pull token from the cookie so we can forward it as Bearer
-  const match = document.cookie.match(/omnivault_token=([^;]+)/)
-  const token = match ? match[1] : ''
-  return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
 // ── Status Badge ─────────────────────────────────────────────────────────────
@@ -71,6 +67,7 @@ export default function WorkspacePage() {
   const [statusMessage, setStatusMessage] = useState('Awaiting document upload...')
   const [errorMessage, setErrorMessage] = useState('')
   const [graphData, setGraphData] = useState<any>(null)
+  const [documentUrl, setDocumentUrl] = useState<string | null>(null)
 
   const [history, setHistory] = useState<DocumentRecord[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
@@ -132,6 +129,10 @@ export default function WorkspacePage() {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/document/${documentId}/status`, { headers: authHeaders() })
         if (!res.ok) throw new Error(`Status check failed (${res.status})`)
         const data = await res.json()
+
+        if (data.file_path) {
+          setDocumentUrl(data.file_path)
+        }
 
         if (data.status === 'completed') {
           stopPolling()
@@ -203,8 +204,20 @@ export default function WorkspacePage() {
   const handleSelectDocument = async (doc: DocumentRecord) => {
     stopPolling()
     setGraphData(null)
+    setDocumentUrl(null)
     setErrorMessage('')
     setActiveDocument(doc.id)
+
+    // Fetch document URL for PDF viewer
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/document/${doc.id}/status`, { headers: authHeaders() })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.file_path) setDocumentUrl(data.file_path)
+      }
+    } catch (e) {
+      console.warn('Failed to fetch document URL:', e)
+    }
 
     if (doc.status === 'completed') {
       setProcessingStatus('processing')
@@ -218,7 +231,7 @@ export default function WorkspacePage() {
       setProcessingStatus('processing')
       setStatusMessage('Extracting knowledge graph & AI insights...')
     }
-}
+  }
 
   const isBusy = processingStatus === 'uploading' || processingStatus === 'processing'
   const hasError = processingStatus === 'failed' || processingStatus === 'error'
@@ -226,25 +239,42 @@ export default function WorkspacePage() {
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden text-text font-sans">
 
+      {/* ── Mobile Overlay ─────────────────────────────────────────────────── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ── History Sidebar ─────────────────────────────────────────────────── */}
-      <div className={`relative flex flex-col bg-secondary/40 border-r border-gray-800 transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-0 overflow-hidden'}`}>
-        <div className="h-14 border-b border-gray-800 flex items-center px-4 shrink-0">
-          <Clock className="w-4 h-4 text-cta mr-2 shrink-0" />
-          <span className="font-mono text-xs font-semibold tracking-wider text-gray-300 truncate">DOCUMENT HISTORY</span>
+      <div className={`fixed md:relative z-40 flex flex-col bg-secondary/40 border-r border-gray-800 transition-all duration-300 h-full ${
+        sidebarOpen ? 'w-64 translate-x-0' : 'w-0 -translate-x-full md:translate-x-0 md:overflow-hidden'
+      }`}>
+        <div className="h-14 border-b border-gray-800 flex items-center justify-between px-4 shrink-0">
+          <div className="flex items-center">
+            <Clock className="w-4 h-4 text-cta mr-2 shrink-0" />
+            <span className="font-mono text-xs font-semibold tracking-wider text-gray-300 truncate">DOCUMENT HISTORY</span>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="md:hidden p-1 text-gray-400 hover:text-white cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {historyLoading && (
-            <div className="flex items-center justify-center py-8 text-gray-600">
-              <Loader2 className="w-5 h-5 animate-spin" />
-            </div>
-          )}
+          {historyLoading && <DocumentListSkeleton />}
           {!historyLoading && history.length === 0 && (
             <p className="text-xs text-gray-600 text-center py-8 px-2">No documents yet. Upload a PDF to get started.</p>
           )}
           {history.map((doc) => (
             <button
               key={doc.id}
-              onClick={() => handleSelectDocument(doc)}
+              onClick={() => {
+                handleSelectDocument(doc)
+                if (window.innerWidth < 768) setSidebarOpen(false)
+              }}
               className={`w-full text-left px-3 py-2.5 rounded-lg transition-all cursor-pointer group ${
                 activeDocument === doc.id
                   ? 'bg-cta/10 border border-cta/30'
@@ -265,17 +295,17 @@ export default function WorkspacePage() {
         </div>
       </div>
 
-      {/* ── Sidebar Toggle ──────────────────────────────────────────────────── */}
+      {/* ── Sidebar Toggle (desktop only) ──────────────────────────────────── */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="absolute top-1/2 z-20 -translate-y-1/2 w-5 h-10 bg-secondary border border-gray-700 rounded-r-md flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-all cursor-pointer"
+        className="hidden md:flex absolute top-1/2 z-20 -translate-y-1/2 w-5 h-10 bg-secondary border border-gray-700 rounded-r-md items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-all cursor-pointer"
         style={{ left: sidebarOpen ? '256px' : '0px' }}
       >
         {sidebarOpen ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
       </button>
 
-      {/* ── Icon Sidebar ────────────────────────────────────────────────────── */}
-      <div className="w-16 flex flex-col items-center py-6 bg-secondary/50 border-r border-gray-800 shrink-0 gap-8 z-10">
+      {/* ── Icon Sidebar (hidden on mobile) ─────────────────────────────────── */}
+      <div className="hidden md:flex w-16 flex-col items-center py-6 bg-secondary/50 border-r border-gray-800 shrink-0 gap-8 z-10">
         <div className="w-10 h-10 rounded-xl bg-cta flex items-center justify-center text-white font-bold shadow-lg shadow-cta/20">
           O
         </div>
@@ -297,8 +327,33 @@ export default function WorkspacePage() {
         </div>
       </div>
 
+      {/* ── Mobile Bottom Bar ────────────────────────────────────────────────── */}
+      <div className="fixed bottom-0 left-0 right-0 md:hidden z-20 flex items-center justify-around py-2 bg-secondary/90 border-t border-gray-800 backdrop-blur">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="p-2 text-gray-400 hover:text-white cursor-pointer"
+        >
+          <Clock className="w-5 h-5" />
+        </button>
+        <button className="p-2 text-gray-400 hover:text-white cursor-pointer">
+          <Activity className="w-5 h-5" />
+        </button>
+        <div className="w-8 h-8 rounded-lg bg-cta flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-cta/20">
+          O
+        </div>
+        <button className="p-2 text-white bg-white/10 rounded-lg cursor-pointer">
+          <Network className="w-5 h-5" />
+        </button>
+        <button
+          onClick={() => setIsSettingsOpen(true)}
+          className="p-2 text-gray-400 hover:text-white cursor-pointer"
+        >
+          <Settings className="w-5 h-5" />
+        </button>
+      </div>
+
       {/* ── Main Split ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden min-w-0">
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden min-w-0 pb-14 md:pb-0">
 
         {/* ── Left: Document Viewer ── */}
         <div className="flex-1 border-r border-gray-800 flex flex-col bg-background/50 min-w-0">
@@ -318,14 +373,17 @@ export default function WorkspacePage() {
               </button>
             </div>
           </div>
-          <div className="flex-1 p-6 overflow-y-auto">
-            {activeDocument ? (
+          <div className="flex-1 p-6 overflow-hidden">
+            {activeDocument && documentUrl ? (
+              <div className="w-full h-full min-h-[400px] border border-gray-800 rounded-xl bg-secondary/20 shadow-inner overflow-hidden">
+                <PdfViewer url={documentUrl} />
+              </div>
+            ) : activeDocument ? (
               <div className="w-full h-full min-h-[400px] border border-gray-800 rounded-xl bg-secondary/20 shadow-inner flex items-center justify-center relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
                 <div className="text-center">
-                  <FileText className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                  <h3 className="text-sm font-mono font-medium text-gray-400 break-all max-w-xs px-4">{activeDocument}</h3>
-                  <p className="text-xs text-gray-600 mt-2">PDF Viewer Placeholder</p>
+                  <Loader2 className="w-10 h-10 text-gray-600 mx-auto mb-4 animate-spin" />
+                  <p className="text-xs text-gray-600 font-mono">Loading document...</p>
                 </div>
               </div>
             ) : (
@@ -344,8 +402,8 @@ export default function WorkspacePage() {
         {/* ── Right: Intelligence Panel (Graph + Chat split vertically) ── */}
         <div className="flex-1 flex flex-col bg-background/50 min-w-0 overflow-hidden">
 
-          {/* ── Graph Section (top 60%) ── */}
-          <div className="flex flex-col" style={{ height: '60%' }}>
+          {/* ── Graph Section (top 60%, 50% on mobile) ── */}
+          <div className="flex flex-col h-[50%] md:h-[60%]">
             <div className="h-14 border-b border-gray-800 flex items-center px-6 bg-secondary/30 shrink-0">
               <h2 className="font-mono text-sm font-semibold tracking-wider text-gray-300 flex items-center gap-2">
                 <Network className="w-4 h-4 text-cta" /> INTELLIGENCE GRAPH
@@ -390,20 +448,12 @@ export default function WorkspacePage() {
 
                 {processingStatus === 'completed' && graphData ? (
                   <div className="absolute inset-0">
-                    <KnowledgeGraph graphData={graphData} />
+                    <ErrorBoundary label="Knowledge Graph">
+                      <KnowledgeGraph graphData={graphData} />
+                    </ErrorBoundary>
                   </div>
                 ) : isBusy ? (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-                    <div className="relative w-16 h-16">
-                      <div className="absolute inset-0 rounded-full border-2 border-cta/30 animate-ping" />
-                      <div className="absolute inset-2 rounded-full border-2 border-cta/60 animate-ping" style={{ animationDelay: '300ms' }} />
-                      <div className="absolute inset-3 rounded-full border-2 border-cta animate-ping" style={{ animationDelay: '600ms' }} />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Network className="w-6 h-6 text-cta" />
-                      </div>
-                    </div>
-                    <p className="font-mono text-xs text-cta/80 tracking-widest uppercase animate-pulse">Processing Document...</p>
-                  </div>
+                  <GraphSkeleton />
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-600">
                     <Network className="w-12 h-12 mb-3 opacity-50" />
@@ -419,7 +469,9 @@ export default function WorkspacePage() {
 
           {/* ── Chat Section (bottom 40%) ── */}
           <div className="flex-1 min-h-0 overflow-hidden">
-            <ChatPanel />
+            <ErrorBoundary label="Chat">
+              <ChatPanel />
+            </ErrorBoundary>
           </div>
 
         </div>

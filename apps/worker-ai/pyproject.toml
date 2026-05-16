@@ -8,6 +8,7 @@ dependencies = [
     "google-genai>=2.0.1",
     "pymupdf>=1.27.2.3",
     "supabase>=2.30.0",
+    "cryptography>=42.0.0",
 ]
 
 [build-system]

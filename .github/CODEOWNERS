@@ -1,0 +1,22 @@
+# OmniVault Code Ownership
+# Each line is a file pattern followed by one or more owners.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything
+* @Sane219
+
+# Frontend
+apps/web/ @Sane219
+
+# Backend API
+apps/api-core/ @Sane219
+
+# AI Worker
+apps/worker-ai/ @Sane219
+
+# Infrastructure & CI
+.github/ @Sane219
+docker-compose.yml @Sane219
+
+# Documentation
+docs/ @Sane219
