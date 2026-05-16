@@ -37,19 +37,21 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
       return (
         <div className="flex flex-col items-center justify-center h-full min-h-[200px] p-6 text-center">
-          <AlertCircle className="w-10 h-10 text-red-400/60 mb-3" />
-          <p className="text-sm font-mono text-red-400 mb-1">
-            {this.props.label ? `${this.props.label} crashed` : "Something went wrong"}
+          <div className="w-12 h-12 rounded-terminal bg-red-alert/10 border border-red-alert/30 flex items-center justify-center mb-4 shadow-neon-red">
+            <AlertCircle className="w-6 h-6 text-red-alert" />
+          </div>
+          <p className="text-sm font-mono font-semibold uppercase tracking-wider text-red-alert mb-1">
+            {this.props.label ? `${this.props.label} crashed` : "system error"}
           </p>
-          <p className="text-xs text-gray-500 mb-4 max-w-xs truncate">
-            {this.state.error?.message || "An unexpected error occurred"}
+          <p className="text-xs text-text-dim mb-4 max-w-xs truncate font-mono">
+            {this.state.error?.message || "an unexpected error occurred"}
           </p>
           <button
             onClick={this.handleReset}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono bg-secondary hover:bg-gray-700 border border-gray-700 rounded-lg text-gray-300 transition-colors cursor-pointer"
+            className="btn-ghost flex items-center gap-1.5 text-xs"
           >
             <RefreshCw className="w-3 h-3" />
-            Retry
+            RETRY
           </button>
         </div>
       )

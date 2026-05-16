@@ -26,29 +26,29 @@ dagreGraph.setDefaultEdgeLabel(() => ({}));
 function CustomNode({ data, selected }: NodeProps) {
   return (
     <div
-      className={`px-4 py-3 shadow-lg rounded-xl backdrop-blur-md border min-w-[150px] relative group transition-all duration-150 ${
+      className={`px-4 py-3 rounded-terminal border min-w-[150px] relative group transition-all duration-100 ${
         selected
-          ? 'bg-cta/20 border-cta shadow-[0_0_16px_rgba(34,197,94,0.35)]'
-          : 'bg-secondary/90 border-gray-700 hover:border-cta/60'
+          ? 'bg-matrix-green-faint border-matrix-green shadow-neon animate-glow-pulse'
+          : 'bg-panel border-panel-border hover:border-matrix-green-dim hover-glitch'
       }`}
     >
-      <Handle type="target" position={Position.Top} className="w-2 h-2 bg-cta border-none opacity-0 group-hover:opacity-100 transition-opacity" />
+      <Handle type="target" position={Position.Top} className="w-2 h-2 bg-matrix-green border-none opacity-0 group-hover:opacity-100 transition-opacity" />
       <div className="flex items-center gap-2">
-        <div className={`p-1.5 rounded-lg border transition-colors ${selected ? 'bg-cta/20 border-cta/50' : 'bg-background border-gray-700'}`}>
-          <Network className={`w-4 h-4 ${selected ? 'text-cta' : 'text-cta'}`} />
+        <div className={`p-1.5 rounded-terminal border transition-colors ${selected ? 'bg-matrix-green-faint border-matrix-green-dim' : 'bg-void border-panel-border'}`}>
+          <Network className={`w-4 h-4 ${selected ? 'text-matrix-green' : 'text-matrix-green-dim'}`} />
         </div>
         <div>
-          <div className={`text-xs font-mono font-bold uppercase tracking-wider ${selected ? 'text-white' : 'text-gray-300'}`}>
+          <div className={`text-xs font-mono font-bold uppercase tracking-[0.08em] ${selected ? 'text-matrix-green text-glow' : 'text-text-normal'}`}>
             {data.label as string}
           </div>
           {data.type && (
-            <div className={`text-[10px] ${selected ? 'text-cta/70' : 'text-gray-500'}`}>
+            <div className={`text-[10px] font-mono ${selected ? 'text-matrix-green/60' : 'text-text-dim'}`}>
               {data.type as string}
             </div>
           )}
         </div>
       </div>
-      <Handle type="source" position={Position.Bottom} className="w-2 h-2 bg-cta border-none opacity-0 group-hover:opacity-100 transition-opacity" />
+      <Handle type="source" position={Position.Bottom} className="w-2 h-2 bg-matrix-green border-none opacity-0 group-hover:opacity-100 transition-opacity" />
     </div>
   );
 }
@@ -91,17 +91,9 @@ function Graph({ graphData }: KnowledgeGraphProps) {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { setSelectedNode } = useStore();
 
-  console.log('[KnowledgeGraph] Received:', JSON.stringify(graphData));
-
   useEffect(() => {
-    if (!graphData?.nodes || !graphData?.edges) {
-      console.log('[KnowledgeGraph] Invalid data');
-      return;
-    }
-    if (graphData.nodes.length === 0) {
-      console.log('[KnowledgeGraph] Empty nodes');
-      return;
-    }
+    if (!graphData?.nodes || !graphData?.edges) return;
+    if (graphData.nodes.length === 0) return;
 
     const initialNodes: Node[] = graphData.nodes.map((n) => ({
       id: String(n.id),
@@ -116,11 +108,11 @@ function Graph({ graphData }: KnowledgeGraphProps) {
       target: String(e.target),
       label: e.label,
       animated: true,
-      style: { stroke: '#475569', strokeWidth: 1.5 },
-      labelStyle: { fill: '#94A3B8', fontWeight: 500, fontSize: 10 },
-      labelBgStyle: { fill: '#0F172A' },
+      style: { stroke: '#335533', strokeWidth: 1.5 },
+      labelStyle: { fill: '#4a5a4a', fontWeight: 500, fontSize: 10, fontFamily: 'monospace' },
+      labelBgStyle: { fill: '#0a0f0a', fillOpacity: 0.9 },
       labelBgPadding: [4, 4] as [number, number],
-      labelBgBorderRadius: 4,
+      labelBgBorderRadius: 2,
     }));
 
     const { nodes: ln, edges: le } = getLayoutedElements(initialNodes, initialEdges);
@@ -128,7 +120,6 @@ function Graph({ graphData }: KnowledgeGraphProps) {
     setEdges(le);
   }, [graphData, setNodes, setEdges]);
 
-  // ── Node click → Zustand ────────────────────────────────────────────────
   const handleNodeClick: NodeMouseHandler = useCallback((_event, node) => {
     setSelectedNode({
       id: node.id,
@@ -137,13 +128,12 @@ function Graph({ graphData }: KnowledgeGraphProps) {
     });
   }, [setSelectedNode]);
 
-  // ── Clicking the background clears selection ────────────────────────────
   const handlePaneClick = useCallback(() => {
     setSelectedNode(null);
   }, [setSelectedNode]);
 
   return (
-    <div className="w-full h-full rounded-xl overflow-hidden">
+    <div className="w-full h-full rounded-terminal overflow-hidden">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -158,8 +148,8 @@ function Graph({ graphData }: KnowledgeGraphProps) {
         className="bg-transparent"
         minZoom={0.2}
       >
-        <Background color="#1E293B" gap={20} size={1} />
-        <Controls className="bg-secondary border-gray-700 fill-gray-400" />
+        <Background color="#1a2a1a" gap={20} size={1} />
+        <Controls className="bg-terminal border-panel-border fill-text-dim" />
       </ReactFlow>
     </div>
   );
