@@ -66,7 +66,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: apps/web/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
       - name: Install dependencies
         working-directory: apps/web
         run: pnpm install --frozen-lockfile
@@ -91,7 +91,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: apps/web/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
       - name: Install dependencies
         working-directory: apps/web
         run: pnpm install --frozen-lockfile
@@ -113,7 +113,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: apps/web/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
       - name: Install dependencies
         working-directory: apps/web
         run: pnpm install --frozen-lockfile
@@ -138,7 +138,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: apps/web/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
       - name: Audit npm packages
         working-directory: apps/web
         run: pnpm audit --audit-level high || true
