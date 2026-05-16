@@ -6,8 +6,6 @@ Thank you for your interest in contributing to OmniVault! This guide covers ever
 
 ## Prerequisites
 
-Before you begin, ensure the following tools are installed on your machine:
-
 | Tool | Version | Purpose |
 |------|---------|---------|
 | [Docker](https://docs.docker.com/get-docker/) | Latest | Local container runtime |
@@ -29,9 +27,8 @@ OmniVault/
 │   ├── web/             # Next.js frontend (port 3000)
 │   └── worker-ai/       # Hatchet AI worker
 ├── packages/            # Reserved for shared libraries
-├── graphify-out/       # AI-generated knowledge graph artifacts
-├── docs/                # Documentation (this you are reading)
-└── schema.sql          # Supabase PostgreSQL schema
+├── docs/                # Architecture & API documentation
+└── schema.sql           # Supabase PostgreSQL schema
 ```
 
 ---
@@ -52,7 +49,7 @@ lefthook install
 ```
 
 This enables:
-- **Pre-commit**: ESLint + Ruff lint checks
+- **Pre-commit**: Ruff (Python lint + format) + ESLint (TypeScript)
 - **Pre-push**: (placeholder — add test commands here)
 
 ### 3. Start Infrastructure Services
@@ -74,6 +71,8 @@ Create `.env` files for each app:
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your-anon-key
 SUPABASE_SERVICE_KEY=your-service-key
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_JWT_SECRET=your-jwt-secret
 HOST=0.0.0.0
 PORT=8080
 ```
@@ -92,7 +91,7 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:8080
 
 ### 5. Set Up Supabase
 
-1. Create a [Supabase](https://supabase.com) project
+1. Create a [Supabase](https://supabase.com) project (free tier works)
 2. Run `schema.sql` in the Supabase SQL Editor to create `users` and `documents` tables
 3. Enable **Email Auth** in Supabase Authentication settings
 4. Create a **documents** storage bucket (public)
@@ -101,8 +100,7 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:8080
 
 **Frontend:**
 ```bash
-cd apps/web
-pnpm install
+cd apps/web && pnpm install
 ```
 
 **Backend & Worker:**
@@ -115,29 +113,20 @@ cd ../worker-ai && uv sync
 
 ## Running Locally
 
-### Start the API Server
+Start each service in a separate terminal:
 
 ```bash
-cd apps/api-core
-uv run python -m api_core.main
-# Runs on http://localhost:8080
+# Terminal 1 — API Server
+cd apps/api-core && uv run python -m api_core.main
+
+# Terminal 2 — AI Worker
+cd apps/worker-ai && uv run python -m worker_ai.main
+
+# Terminal 3 — Frontend
+cd apps/web && pnpm dev
 ```
 
-### Start the AI Worker
-
-```bash
-cd apps/worker-ai
-uv run python -m worker_ai.main
-# Runs on port defined by Hatchet
-```
-
-### Start the Frontend
-
-```bash
-cd apps/web
-pnpm dev
-# Runs on http://localhost:3000
-```
+Open [http://localhost:3000](http://localhost:3000) — register an account, add your Gemini API key in Settings, and upload your first PDF.
 
 ---
 
@@ -157,10 +146,12 @@ pnpm dev
 - **Linter**: ESLint — enforced via Lefthook pre-commit
 - **Styling**: Tailwind CSS utility classes (no custom CSS files)
 - **State**: Zustand via `useStore.ts`
-- **API calls**: Fetch API with `authHeaders()` helper
+- **API calls**: Fetch API with `authHeaders()` helper (reads token from cookie)
 - **Components**: Functional components with `"use client"` directive where needed
 
-### Git Workflow
+---
+
+## Git Workflow
 
 1. Create a feature branch:
    ```bash
@@ -218,7 +209,7 @@ This keeps the graph at `graphify-out/` in sync with the current codebase (AST-o
 
 ## Reporting Issues
 
-Open an issue at [github.com/your-repo/OmniVault/issues](https://github.com/your-repo/OmniVault/issues) with:
+Open an issue with:
 
 - A clear title and description
 - Steps to reproduce

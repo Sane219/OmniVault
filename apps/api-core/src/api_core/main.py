@@ -11,6 +11,7 @@ from api_core.routes.upload import upload_router  # noqa: E402
 from api_core.routes.user import user_router  # noqa: E402
 from api_core.routes.document import document_router  # noqa: E402
 from api_core.routes.chat import chat_router  # noqa: E402
+from api_core.routes.ws_document import register_ws_routes  # noqa: E402
 
 app = Robyn(__file__)
 
@@ -48,6 +49,11 @@ async def rate_limit_middleware(request: Request):
     if request.method == "OPTIONS":
         return request
 
+    # Skip rate limiting for WebSocket upgrades
+    path = request.url.path if hasattr(request, 'url') and request.url else ""
+    if path.startswith("/ws/"):
+        return request
+
     ip = _get_client_ip(request)
     path = request.url.path if hasattr(request, 'url') and request.url else ""
 
@@ -76,6 +82,7 @@ app.include_router(upload_router)
 app.include_router(user_router)
 app.include_router(document_router)
 app.include_router(chat_router)
+register_ws_routes(app)
 
 
 @app.get("/")

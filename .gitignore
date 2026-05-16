@@ -49,3 +49,4 @@ graphify-out/
 test_*.pdf
 .agent/
 .opencode/
+.claude/

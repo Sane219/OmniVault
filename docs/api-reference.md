@@ -2,13 +2,13 @@
 
 Base URL: `http://localhost:8080` (development)
 
-All endpoints that access user-specific resources require the `Authorization: Bearer <token>` header. The token is obtained via `/auth/login` or `/auth/register`.
+All endpoints that access user-specific resources require the `Authorization: Bearer <token>` header. The token is obtained via `/register` or `/login`.
 
 ---
 
 ## Authentication
 
-### `POST /auth/register`
+### `POST /register`
 
 Creates a new user account via Supabase Auth and syncs to the local `users` table.
 
@@ -33,9 +33,9 @@ Creates a new user account via Supabase Auth and syncs to the local `users` tabl
 
 ---
 
-### `POST /auth/login`
+### `POST /login`
 
-Authenticates an existing user.
+Authenticates an existing user via Supabase Auth.
 
 **Request Body**
 
@@ -75,6 +75,12 @@ Uploads a PDF file, stores it in Supabase Storage, creates a document record, an
 | 401 | `{"error": "Unauthorized"}` | Missing or invalid token |
 | 500 | `{"error": "..."}` | Server error |
 
+**Processing Pipeline**
+
+After upload, the document goes through: `UPLOADED` → `PROCESSING` → `COMPLETED` | `FAILED`
+
+The worker extracts text via PyMuPDF, generates a knowledge graph via Gemini 2.5 Flash, and stores the result in the `graph_data` JSONB column.
+
 ---
 
 ### `GET /documents`
@@ -90,7 +96,7 @@ Returns all documents belonging to the authenticated user, newest first.
 | 200 | `{"documents": [{id, status, error_message, created_at}, ...]}` | List of documents |
 | 401 | `{"error": "Unauthorized or invalid token"}` | Invalid token |
 
-**Document status values**: `UPLOADED` | `PROCESSING` | `COMPLETED` | `FAILED`
+**Document status values**: `uploaded` | `processing` | `completed` | `failed`
 
 ---
 
@@ -105,7 +111,7 @@ Polls the current processing status of a specific document.
 | Status | Body | Description |
 |--------|------|-------------|
 | 200 | `{"status": "completed", "document_id": "..."}` | Current status |
-| 200 | `{"status": "failed", "document_id": "...", "error_message": "..."}` | Failed with error |
+| 200 | `{"status": "failed", "document_id": "...", "error_message": "..."}` | Failed with error message |
 | 400 | `{"error": "Missing document ID"}` | No ID in path |
 | 401 | `{"error": "Unauthorized or invalid token"}` | Invalid token |
 | 404 | `{"error": "Document not found"}` | Document doesn't exist or belongs to another user |
@@ -114,7 +120,7 @@ Polls the current processing status of a specific document.
 
 ### `GET /document/:id/graph`
 
-Retrieves the knowledge graph JSON for a completed document. The `full_content` field is stripped from each node before returning.
+Retrieves the knowledge graph JSON for a completed document. The `full_content` field is **stripped** from each node before returning (JSONB payload protection).
 
 **Headers**: `Authorization: Bearer <token>`
 
@@ -122,9 +128,9 @@ Retrieves the knowledge graph JSON for a completed document. The `full_content` 
 
 | Status | Body | Description |
 |--------|------|-------------|
-| 200 | `{ "metadata": {...}, "nodes": [...], "edges": [...] }` | Graph data |
+| 200 | `{"metadata": {...}, "nodes": [...], "edges": [...]}` | Graph data |
 | 409 | `{"error": "Graph not ready. Current status: processing"}` | Document not yet completed |
-| 404 | `{"error": "Document not found"}` | Not found |
+| 404 | `{"error": "Document not found"}` | Not found or not owned by user |
 | 401 | `{"error": "Unauthorized or invalid token"}` | Invalid token |
 
 **Graph Node Shape** (after stripping):
@@ -150,13 +156,22 @@ Retrieves the knowledge graph JSON for a completed document. The `full_content` 
 }
 ```
 
+**Graph Metadata**:
+
+```json
+{
+  "tier": "TINY | SMALL | MEDIUM | LARGE",
+  "page_count": 42
+}
+```
+
 ---
 
 ## Chat (RAG over Knowledge Graph)
 
 ### `POST /document/:id/chat`
 
-Streams an AI response using the document's knowledge graph as context. Uses Server-Sent Events (SSE) with `data:` messages.
+Streams an AI response using the document's knowledge graph as context. Uses Server-Sent Events (SSE) with `data:` messages. The graph is pruned based on the selected node before sending to Gemini.
 
 **Headers**:
 - `Authorization: Bearer <token>`
@@ -175,7 +190,10 @@ Streams an AI response using the document's knowledge graph as context. Uses Ser
 }
 ```
 
-`nodeContext` is optional. If provided, the graph is pruned to the selected node and its 1-hop neighbors before sending to Gemini.
+| Field | Required | Description |
+|-------|----------|-------------|
+| `message` | Yes | The user's question |
+| `nodeContext` | No | If provided, prunes graph to this node + 1-hop neighbors |
 
 **SSE Response Format**
 
@@ -186,21 +204,32 @@ data: this
 data: is
 data: a
 data: stream
-data: ERROR: <error message>
+```
+
+Error during streaming:
+
+```
+data: ERROR: Invalid API key
 event: error
 ```
 
 **HTTP Responses**
 
-| Status | Description |
-|--------|-------------|
-| 200 | SSE stream initiated (no `data: [DONE]` — stream terminates on error) |
-| 400 | `{"error": "message is required"}` |
-| 400 | `{"error": "No Gemini API key configured. Please add one in Settings."}` |
-| 401 | Invalid token |
-| 404 | Document not found |
-| 409 | `{"error": "Document graph is not ready yet"}` |
-| 501 | `{"error": "google-genai package is not installed"}` |
+| Status | Body | Description |
+|--------|------|-------------|
+| 200 | SSE stream | Streaming response (connection closes when done) |
+| 400 | `{"error": "message is required"}` | Empty message |
+| 400 | `{"error": "No Gemini API key configured..."}` | User hasn't set API key |
+| 401 | `{"error": "Unauthorized or invalid token"}` | Invalid token |
+| 404 | `{"error": "Document not found"}` | Not found |
+| 409 | `{"error": "Document graph is not ready yet"}` | Still processing |
+| 501 | `{"error": "google-genai package is not installed"}` | Missing dependency |
+
+**Graph Pruning Logic**
+
+1. **Node selected**: Returns the selected node + its immediate neighbors (ego subgraph)
+2. **No node, large graph (>1000 nodes)**: Returns only root nodes (no incoming edges)
+3. **No node, small graph**: Returns the full graph
 
 ---
 
@@ -208,7 +237,7 @@ event: error
 
 ### `POST /user/api-key`
 
-Stores the user's Gemini API key in the `users` table.
+Stores the user's Gemini API key in the `users` table. Required for document processing and chat.
 
 **Headers**:
 - `Authorization: Bearer <token>`
@@ -218,7 +247,7 @@ Stores the user's Gemini API key in the `users` table.
 
 ```json
 {
-  "api_key": "AIza..."
+  "api_key": "AIzaSy..."
 }
 ```
 
@@ -239,18 +268,24 @@ Stores the user's Gemini API key in the `users` table.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `id` | UUID | PRIMARY KEY | Supabase Auth user ID |
-| `email` | TEXT | NOT NULL UNIQUE | User email |
-| `password_hash` | TEXT | NOT NULL | Hash placeholder (Supabase handles auth) |
-| `gemini_api_key` | TEXT | | User's Gemini API key (nullable) |
+| `id` | UUID | PRIMARY KEY, DEFAULT gen_random_uuid() | Supabase Auth user ID |
+| `email` | TEXT | NOT NULL, UNIQUE | User email address |
+| `password_hash` | TEXT | NOT NULL | Placeholder (Supabase handles actual auth) |
+| `gemini_api_key` | TEXT | NULLABLE | User's Google Gemini API key |
 
 ### `documents` Table
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `id` | UUID | PRIMARY KEY | Document ID |
-| `owner_id` | UUID | REFERENCES users(id) | Owner FK |
-| `status` | TEXT | NOT NULL DEFAULT 'UPLOADED' | Processing status |
-| `error_message` | TEXT | | Populated on FAILED |
-| `graph_data` | JSONB | | Knowledge graph JSON (COMPLETED) |
-| `created_at` | TIMESTAMP | NOT NULL DEFAULT now() | Creation timestamp |
+| `id` | UUID | PRIMARY KEY, DEFAULT gen_random_uuid() | Document ID |
+| `owner_id` | UUID | REFERENCES users(id) ON DELETE CASCADE | Document owner |
+| `status` | TEXT | NOT NULL, DEFAULT 'UPLOADED' | Processing lifecycle status |
+| `error_message` | TEXT | NULLABLE | Error details when status = FAILED |
+| `graph_data` | JSONB | NULLABLE | Knowledge graph JSON when status = COMPLETED |
+| `created_at` | TIMESTAMP | NOT NULL, DEFAULT now() | Creation timestamp |
+
+**Indexes**: `documents_owner_id_idx` on `owner_id` for fast per-user document listing.
+
+### Storage
+
+Supabase Storage bucket: `documents` (public). Files are stored at `{user_id}/{uuid}.pdf`.

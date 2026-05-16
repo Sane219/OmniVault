@@ -14,8 +14,6 @@ import { authHeaders } from '../../lib/auth'
 import { DocumentListSkeleton, GraphSkeleton } from '../../components/Skeleton'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 
-const POLL_INTERVAL_MS = 2000
-
 type ProcessingStatus = 'idle' | 'uploading' | 'processing' | 'completed' | 'failed' | 'error'
 
 interface DocumentRecord {
@@ -73,7 +71,7 @@ export default function WorkspacePage() {
   const [historyLoading, setHistoryLoading] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const wsRef = useRef<WebSocket | null>(null)
 
   const router = useRef<any>(null) // Use router if available or redirect manually
 
@@ -86,10 +84,10 @@ export default function WorkspacePage() {
   }, [])
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
-  const stopPolling = useCallback(() => {
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current)
-      pollIntervalRef.current = null
+  const closeWs = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.close()
+      wsRef.current = null
     }
   }, [])
 
@@ -122,17 +120,24 @@ export default function WorkspacePage() {
     }
   }, [fetchHistory])
 
-  const startPolling = useCallback((documentId: string) => {
+  // Fallback polling if WebSocket fails
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current)
+      pollIntervalRef.current = null
+    }
+  }, [])
+
+  const startPollingFallback = useCallback((documentId: string) => {
     stopPolling()
     pollIntervalRef.current = setInterval(async () => {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/document/${documentId}/status`, { headers: authHeaders() })
-        if (!res.ok) throw new Error(`Status check failed (${res.status})`)
+        if (!res.ok) return
         const data = await res.json()
 
-        if (data.file_path) {
-          setDocumentUrl(data.file_path)
-        }
+        if (data.file_path) setDocumentUrl(data.file_path)
 
         if (data.status === 'completed') {
           stopPolling()
@@ -140,39 +145,93 @@ export default function WorkspacePage() {
         } else if (data.status === 'failed') {
           stopPolling()
           setProcessingStatus('failed')
-          setErrorMessage(data.error_message || 'Processing failed. Please check your API key.')
+          setErrorMessage(data.error_message || 'Processing failed.')
           await fetchHistory()
         }
-        // 'processing' or 'uploaded' → keep polling
       } catch (err) {
         stopPolling()
         setProcessingStatus('error')
         setErrorMessage(err instanceof Error ? err.message : 'Polling failed.')
       }
-    }, POLL_INTERVAL_MS)
+    }, 2000)
   }, [stopPolling, fetchGraph, fetchHistory])
+
+  const connectWs = useCallback((documentId: string) => {
+    closeWs()
+
+    const token = document.cookie.match(/omnivault_token=([^;]+)/)?.[1]
+    if (!token) return
+
+    const wsUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080')
+      .replace(/^http/, 'ws') + `/ws/document?id=${documentId}&token=${token}`
+
+    const ws = new WebSocket(wsUrl)
+    wsRef.current = ws
+
+    ws.onmessage = async (e) => {
+      try {
+        const data = JSON.parse(e.data)
+
+        if (data.error) {
+          setProcessingStatus('error')
+          setErrorMessage(data.error)
+          return
+        }
+
+        if (data.file_path) setDocumentUrl(data.file_path)
+        if (data.message) setStatusMessage(data.message)
+
+        if (data.status === 'completed') {
+          setProcessingStatus('processing')
+          setStatusMessage('Loading graph...')
+          await fetchGraph(documentId)
+        } else if (data.status === 'failed') {
+          setProcessingStatus('failed')
+          setErrorMessage(data.error_message || data.message || 'Processing failed.')
+          await fetchHistory()
+        }
+      } catch (err) {
+        console.warn('WS message parse error:', err)
+      }
+    }
+
+    ws.onerror = () => {
+      console.warn('WebSocket failed, falling back to polling')
+      startPollingFallback(documentId)
+    }
+
+    ws.onclose = () => {
+      wsRef.current = null
+    }
+  }, [closeWs, fetchGraph, fetchHistory, startPollingFallback])
 
   // ── Initial history load ─────────────────────────────────────────────────────
   useEffect(() => {
     const timer = setTimeout(fetchHistory, 0)
     return () => {
       clearTimeout(timer)
+      closeWs()
       stopPolling()
     }
-  }, [fetchHistory, stopPolling])
+  }, [fetchHistory, closeWs, stopPolling])
 
-  // ── Kick off polling when activeDocument + status changes ────────────────────
+  // ── Connect WebSocket when processing starts ────────────────────────────────
   useEffect(() => {
     if (activeDocument && processingStatus === 'processing') {
-      startPolling(activeDocument)
+      connectWs(activeDocument)
     }
-  }, [activeDocument, processingStatus, startPolling])
+    return () => {
+      closeWs()
+      stopPolling()
+    }
+  }, [activeDocument, processingStatus, connectWs, closeWs, stopPolling])
 
   // ── Upload Handler ───────────────────────────────────────────────────────────
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
+    closeWs()
     stopPolling()
     setGraphData(null)
     setErrorMessage('')
@@ -202,6 +261,7 @@ export default function WorkspacePage() {
 
   // ── Load a historical document ───────────────────────────────────────────────
   const handleSelectDocument = async (doc: DocumentRecord) => {
+    closeWs()
     stopPolling()
     setGraphData(null)
     setDocumentUrl(null)

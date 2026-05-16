@@ -47,6 +47,18 @@ def _update_status(
     supabase.table("documents").update(update_payload).eq("id", document_id).execute()
 
 
+def _stream(ctx: Context, step: str, progress: int, message: str) -> None:
+    """Send a progress event to the Hatchet stream."""
+    try:
+        ctx.put_stream(json.dumps({
+            "step": step,
+            "progress": progress,
+            "message": message,
+        }))
+    except Exception as e:
+        print(f"[Worker][WARN] Stream event failed: {e}")
+
+
 @document_workflow.task()
 async def process_document(input, ctx: Context):
     input_dict = input.model_dump() if hasattr(input, "model_dump") else dict(input)
@@ -59,13 +71,14 @@ async def process_document(input, ctx: Context):
     print(f"[Worker] Starting processing for Document ID: {document_id}, file: {file_path}")
 
     # ── Step 1: Mark as PROCESSING ───────────────────────────────────────────
+    _stream(ctx, "status", 5, "Starting document processing...")
     try:
         await asyncio.to_thread(_update_status, document_id, "PROCESSING")
     except Exception as e:
         print(f"[Worker][WARN] Could not set PROCESSING status: {e}")
-        # Non-fatal — continue even if Supabase is temporarily unreachable
 
     # ── Step 2: Fetch the user's Gemini API key (joined query) ──────────────
+    _stream(ctx, "api_key", 10, "Fetching API key...")
     api_key: str | None = None
     try:
         result = await asyncio.to_thread(
@@ -100,6 +113,7 @@ async def process_document(input, ctx: Context):
             else str(e)
         )
         print(f"[Worker] Failed to fetch API key: {e}")
+        _stream(ctx, "error", 0, f"Failed: {error_msg}")
         try:
             await asyncio.to_thread(_update_status, document_id, "FAILED", error_message=error_msg)
         except Exception as db_err:
@@ -107,10 +121,13 @@ async def process_document(input, ctx: Context):
         return {"status": "error", "document_id": document_id, "error": error_msg}
 
     # ── Step 3: Extract document structure ───────────────────────────────────
+    _stream(ctx, "extracting", 25, "Extracting text from PDF...")
     try:
-        structured_text = extract_document_structure(file_path)
+        structured_text = await asyncio.to_thread(extract_document_structure, file_path)
+        _stream(ctx, "extracting", 50, "Text extraction complete.")
     except Exception as e:
         print(f"[Worker] Failed to extract document structure: {e}")
+        _stream(ctx, "error", 0, f"Extraction failed: {e}")
         try:
             await asyncio.to_thread(
                 _update_status, document_id, "FAILED",
@@ -121,8 +138,10 @@ async def process_document(input, ctx: Context):
         return {"status": "error", "document_id": document_id, "error": str(e)}
 
     # ── Step 4: Generate knowledge graph via Gemini ──────────────────────────
+    _stream(ctx, "generating", 60, "Generating knowledge graph with AI...")
     try:
         graph = await asyncio.to_thread(generate_knowledge_graph, structured_text, api_key)
+        _stream(ctx, "generating", 90, "Knowledge graph generated.")
     except Exception as e:
         error_msg = (
             "Invalid or missing Gemini API Key"
@@ -130,6 +149,7 @@ async def process_document(input, ctx: Context):
             else f"AI generation failed: {e}"
         )
         print(f"[Worker] Failed to generate knowledge graph: {e}")
+        _stream(ctx, "error", 0, f"Failed: {error_msg}")
         try:
             await asyncio.to_thread(_update_status, document_id, "FAILED", error_message=error_msg)
         except Exception:
@@ -137,6 +157,7 @@ async def process_document(input, ctx: Context):
         return {"status": "error", "document_id": document_id, "error": error_msg}
 
     # ── Step 5: Persist COMPLETED status + graph to Supabase ─────────────────
+    _stream(ctx, "saving", 95, "Saving results...")
     try:
         await asyncio.to_thread(_update_status, document_id, "COMPLETED", graph_data=graph)
         print(f"[Worker] Successfully saved graph for Document ID: {document_id}")
@@ -146,6 +167,7 @@ async def process_document(input, ctx: Context):
         with open(fallback_path, "w", encoding="utf-8") as f:
             json.dump(graph, f, indent=2)
 
+    _stream(ctx, "completed", 100, "Processing complete!")
     return {"status": "success", "document_id": document_id}
 
 
