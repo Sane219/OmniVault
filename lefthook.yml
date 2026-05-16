@@ -14,32 +14,18 @@ pre-commit:
       glob: "docker-compose.yml"
       run: docker compose config --quiet || echo "Docker Compose validation skipped"
 
-    # Uncomment when Dockerfiles exist:
-    # lint-dockerfile:
-    #   glob: "**/Dockerfile*"
-    #   run: hadolint {staged_files}
-
-    # Uncomment when shell scripts exist:
-    # lint-shell:
-    #   glob: "**/*.sh"
-    #   run: shellcheck {staged_files}
-
-    # Uncomment when infra-as-code files exist:
-    # lint-iac:
-    #   glob: "**/{terraform*,cloudformation*,*.cfn}"
-    #   run: checkov -f {staged_files}
-
-    # Uncomment to enable secret scanning:
-    # scan-secrets:
-    #   glob: "**"
-    #   run: gitleaks detect --staged-from-git --verbose
-
 pre-push:
   parallel: true
   commands:
-    test-python:
-      glob: "apps/api-core/**/*.py apps/worker-ai/**/*.py"
-      run: uv run pytest
+    typecheck-frontend:
+      glob: "apps/web/**/*.{ts,tsx}"
+      run: cd apps/web && pnpm exec tsc --noEmit
+    test-python-api:
+      glob: "apps/api-core/**/*.py"
+      run: cd apps/api-core && ENCRYPTION_KEY=QGQLFwZJhYSeyDG8sED8Wl80_RyIZpZ1nYmAE1M07Og= SUPABASE_JWT_SECRET=test-secret-for-unit-tests uv run pytest tests/ -q --tb=short
+    test-python-worker:
+      glob: "apps/worker-ai/**/*.py"
+      run: cd apps/worker-ai && ENCRYPTION_KEY=QGQLFwZJhYSeyDG8sED8Wl80_RyIZpZ1nYmAE1M07Og= uv run pytest tests/ -q --tb=short
     test-frontend:
-      glob: "apps/web/**/*.{js,ts,jsx,tsx}"
-      run: cd apps/web && pnpm exec tsc --noEmit || true
+      glob: "apps/web/**/*.{ts,tsx}"
+      run: cd apps/web && pnpm test

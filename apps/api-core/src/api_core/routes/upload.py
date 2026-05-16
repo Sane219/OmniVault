@@ -10,6 +10,9 @@ upload_router = SubRouter(__name__)
 hatchet = Hatchet()
 
 BUCKET_NAME = "documents"
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+ALLOWED_CONTENT_TYPES = {"application/pdf"}
+ALLOWED_EXTENSIONS = {".pdf"}
 
 
 def _ensure_bucket():
@@ -50,10 +53,12 @@ async def upload_file(request):
     try:
         files = request.files
         file_content: bytes | None = None
+        filename: str | None = None
 
         if files:
             first_key = list(files.keys())[0]
             file_content = files[first_key]
+            filename = first_key
         elif request.body:
             file_content = request.body
         else:
@@ -62,6 +67,24 @@ async def upload_file(request):
                 headers={"Content-Type": "application/json"},
                 description=json.dumps({"error": "No file uploaded"}),
             )
+
+        # Validate file size
+        if len(file_content) > MAX_FILE_SIZE:
+            return Response(
+                status_code=413,
+                headers={"Content-Type": "application/json"},
+                description=json.dumps({"error": f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB"}),
+            )
+
+        # Validate file extension if filename available
+        if filename:
+            ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+            if ext not in ALLOWED_EXTENSIONS:
+                return Response(
+                    status_code=415,
+                    headers={"Content-Type": "application/json"},
+                    description=json.dumps({"error": f"Invalid file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"}),
+                )
 
         sys.stderr.write("UPLOAD: uploading to Supabase Storage\n")
         sys.stderr.flush()

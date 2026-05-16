@@ -44,7 +44,7 @@ async def get_document_status(request):
     try:
         result = (
             supabase.table("documents")
-            .select("status, error_message")
+            .select("status, error_message, file_path")
             .eq("id", document_id)
             .eq("owner_id", user_id)
             .limit(1)
@@ -60,6 +60,8 @@ async def get_document_status(request):
         payload: dict = {"status": status_str, "document_id": document_id}
         if doc.get("error_message"):
             payload["error_message"] = doc["error_message"]
+        if doc.get("file_path"):
+            payload["file_path"] = doc["file_path"]
 
         return _ok(payload)
 

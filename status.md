@@ -1,6 +1,6 @@
 # OmniVault - Product Strategy & Roadmap
 
-> Last Updated: 2026-05-10 | Phase 1 Complete - Two-Phase RAG + UX Fixes
+> Last Updated: 2026-05-16 | Phase 2 In Progress — Weeks 1+2 Complete (Trust & Resilience)
 
 ---
 
@@ -29,12 +29,15 @@
 
 ## 📈 The Horizon (Long-Term Roadmap)
 
-### Phase 2: Scale & UX (Months 3-6)
+### Phase 2: Scale & UX (Months 3-6) — IN PROGRESS
 - [ ] Implement Redis caching for graph queries (reduce DB load)
-- [ ] Add react-pdf viewer for document preview
+- [x] **Add react-pdf viewer** — `PdfViewer.tsx` with dynamic import, PDF.js worker config
 - [ ] Inter-document knowledge graph (cross-reference multiple PDFs)
-- [ ] Skeleton loaders & graceful error boundaries
-- [ ] WebSocket for real-time processing updates
+- [x] **Skeleton loaders** — `Skeleton.tsx` with `DocumentListSkeleton`, `GraphSkeleton`, `ChatSkeleton`
+- [x] **Error boundaries** — `ErrorBoundary.tsx` wrapping KnowledgeGraph + ChatPanel
+- [x] **Mobile responsiveness** — drawer sidebar, bottom nav bar, responsive layout
+- [x] **Extract auth.ts** — deduplicated `authHeaders()` utility
+- [ ] WebSocket for real-time processing updates (Hatchet `ctx.put_stream()`)
 
 ### Phase 3: Advanced Intelligence (Months 6-12)
 - [ ] **Ollama fallback** for privacy-sensitive local processing
@@ -54,12 +57,12 @@
 
 ## 🎯 Immediate Next Steps (This Week)
 
-### Priority 1: Security Hardening
+### Priority 1: Security Hardening ✅ COMPLETE (2026-05-16)
 - [x] **Supabase Auth** (implemented in Phase 1 via `auth.py`)
-- [ ] Enable JWT signature verification (optional with Supabase session cookies)
-- [ ] Add file upload validation (max size, content-type check)
-- [ ] Implement rate limiting on auth/upload endpoints
-- [ ] Encrypt API key at rest (Fernet encryption)
+- [x] Enable JWT signature verification - `verify_signature: True` + `verify_exp: True` in `auth_utils.py`
+- [x] Add file upload validation - 50MB limit + PDF extension check in `upload.py`
+- [x] Implement rate limiting - 60 req/min general, 10 req/min for auth endpoints in `main.py`
+- [x] Encrypt API key at rest - Fernet encryption with `ENCRYPTION_KEY` env var in `crypto_utils.py`
 
 ### Priority 2: Database & Infrastructure
 - [ ] Clean up docker-compose to match actual Supabase usage (EdgeDB is unused)
@@ -76,15 +79,15 @@
 
 ## 🛡️ Security & UX Audit
 
-### Critical Vulnerabilities 🔴
+### Critical Vulnerabilities 🟢 ALL FIXED (2026-05-16)
 
 | Issue | Location | Severity | Status |
 |-------|----------|----------|--------|
-| JWT signature verification disabled | `auth_utils.py:43-48` | **CRITICAL** | Not fixed |
-| API key stored in plain text in DB | `users.gemini_api_key` column | **HIGH** | Not fixed |
-| No file upload validation | `upload.py:50-64` | **MEDIUM** | Not fixed |
-| CORS allows all origins (`origins=["*"]`) | `main.py:14` | **MEDIUM** | Not fixed |
-| No rate limiting | All endpoints | **MEDIUM** | Not fixed |
+| JWT signature verification disabled | `auth_utils.py` | **CRITICAL** | ✅ Fixed |
+| API key stored in plain text in DB | `users.gemini_api_key` column | **HIGH** | ✅ Fixed |
+| No file upload validation | `upload.py` | **MEDIUM** | ✅ Fixed |
+| CORS allows all origins (`origins=["*"]`) | `main.py` | **MEDIUM** | ✅ Fixed |
+| No rate limiting | All endpoints | **MEDIUM** | ✅ Fixed |
 
 ### UX Friction Points 🟡
 

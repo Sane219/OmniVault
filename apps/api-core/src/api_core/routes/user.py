@@ -2,6 +2,7 @@ import json
 from robyn import SubRouter, Response
 from api_core.db import supabase
 from api_core.auth_utils import decode_token
+from api_core.crypto_utils import encrypt_value
 
 user_router = SubRouter(__name__, prefix="/user")
 
@@ -23,7 +24,8 @@ async def update_api_key(request):
                 description=json.dumps({"error": "api_key is required"}),
             )
 
-        supabase.table("users").update({"gemini_api_key": api_key}).eq("id", user_id).execute()
+        encrypted_key = encrypt_value(api_key)
+        supabase.table("users").update({"gemini_api_key": encrypted_key}).eq("id", user_id).execute()
 
         return Response(
             status_code=200,

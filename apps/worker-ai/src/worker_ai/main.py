@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 
 from worker_ai.rag import extract_document_structure, generate_knowledge_graph
+from worker_ai.crypto_utils import decrypt_value, is_encrypted
 
 load_dotenv()
 
@@ -84,6 +85,13 @@ async def process_document(input, ctx: Context):
 
         if not api_key:
             raise ValueError("User has not provided a Gemini API Key")
+
+        # Decrypt API key if it's encrypted
+        if is_encrypted(api_key):
+            try:
+                api_key = decrypt_value(api_key)
+            except Exception as e:
+                raise ValueError(f"Failed to decrypt API key: {e}")
 
     except Exception as e:
         error_msg = (
