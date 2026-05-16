@@ -1,23 +1,22 @@
 import type { Metadata } from 'next'
-import { Fira_Code, Fira_Sans } from 'next/font/google'
+import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 
-const firaCode = Fira_Code({
+const geist = Geist({
   subsets: ['latin'],
-  variable: '--font-fira-code',
+  variable: '--font-geist',
   display: 'swap',
 })
 
-const firaSans = Fira_Sans({
+const geistMono = Geist_Mono({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-fira-sans',
+  variable: '--font-geist-mono',
   display: 'swap',
 })
 
 export const metadata: Metadata = {
-  title: 'OmniVault Workspace',
-  description: 'AI-powered multimodal workspace',
+  title: 'OmniVault — Terminal',
+  description: 'AI-powered multimodal workspace for document analysis and knowledge extraction',
 }
 
 export default function RootLayout({
@@ -26,8 +25,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${firaCode.variable} ${firaSans.variable} dark`}>
-      <body className="min-h-screen flex flex-col bg-background text-text selection:bg-cta/30">
+    <html lang="en" className={`${geist.variable} ${geistMono.variable} dark`}>
+      <body className="min-h-screen flex flex-col bg-void text-text-normal selection:bg-matrix-green/30 grid-bg crt-scanlines">
         {children}
       </body>
     </html>

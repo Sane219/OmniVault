@@ -4,6 +4,131 @@
 
 @layer base {
   body {
-    @apply bg-background text-text font-sans antialiased;
+    @apply bg-void text-text-normal font-sans antialiased;
+  }
+}
+
+@layer components {
+  /* ── Panel ──────────────────────────────────────────────────────────────── */
+  .neon-panel {
+    @apply bg-panel border border-panel-border rounded-panel;
+    backdrop-filter: blur(4px);
+  }
+  .neon-panel:hover {
+    @apply border-panel-border-hover shadow-neon;
+  }
+
+  /* ── Elevated Panel (modals, popovers) ──────────────────────────────────── */
+  .neon-panel-elevated {
+    @apply bg-terminal border border-panel-border-hover rounded-modal shadow-neon;
+    backdrop-filter: blur(8px);
+  }
+
+  /* ── Input ──────────────────────────────────────────────────────────────── */
+  .neon-input {
+    @apply bg-black/80 border border-matrix-green-dim rounded-terminal text-text-normal placeholder-text-dim
+           transition-all duration-100;
+  }
+  .neon-input:focus {
+    @apply border-matrix-green shadow-neon outline-none animate-glitch;
+  }
+
+  /* ── Primary Button ─────────────────────────────────────────────────────── */
+  .btn-neon {
+    @apply bg-transparent border border-matrix-green text-matrix-green font-mono font-semibold
+           uppercase tracking-widest text-xs rounded-terminal px-5 py-2.5
+           transition-all duration-100 cursor-pointer
+           hover:bg-matrix-green-faint hover:shadow-neon hover:animate-glitch
+           active:scale-[0.98]
+           disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:shadow-none disabled:hover:animate-none disabled:active:scale-100;
+  }
+
+  /* ── Ghost Button ───────────────────────────────────────────────────────── */
+  .btn-ghost {
+    @apply bg-transparent border border-matrix-green-dim text-text-dim rounded-terminal px-5 py-2.5
+           transition-all duration-100 cursor-pointer
+           hover:border-matrix-green hover:text-matrix-green;
+  }
+
+  /* ── Status Badge ───────────────────────────────────────────────────────── */
+  .neon-badge {
+    @apply text-[10px] font-mono font-medium uppercase tracking-wider px-2 py-0.5 rounded-[2px];
+  }
+
+  /* ── CRT Scanlines Overlay ──────────────────────────────────────────────── */
+  .crt-scanlines {
+    position: relative;
+  }
+  .crt-scanlines::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 1px,
+      rgba(0, 0, 0, 0.15) 1px,
+      rgba(0, 0, 0, 0.15) 2px
+    );
+    pointer-events: none;
+    z-index: 50;
+    border-radius: inherit;
+  }
+
+  /* ── Terminal Grid Background ───────────────────────────────────────────── */
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(0, 255, 136, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 136, 0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* ── Grid Background Strong ─────────────────────────────────────────────── */
+  .grid-bg-strong {
+    background-image:
+      linear-gradient(rgba(0, 255, 136, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 136, 0.08) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* ── Matrix Data Shimmer (skeleton) ─────────────────────────────────────── */
+  .matrix-shimmer {
+    @apply relative overflow-hidden;
+  }
+  .matrix-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(0, 255, 136, 0.08) 30%,
+      rgba(0, 255, 136, 0.15) 50%,
+      rgba(0, 255, 136, 0.08) 70%,
+      transparent 100%
+    );
+    animation: matrix-fall 1.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* ── Glitch on Hover (reactive) ─────────────────────────────────────────── */
+  .hover-glitch:hover {
+    animation: glitch-jitter 0.15s ease-in-out;
+  }
+
+  /* ── Neon Text Glow ─────────────────────────────────────────────────────── */
+  .text-glow {
+    text-shadow: 0 0 5px rgba(0, 255, 136, 0.5), 0 0 10px rgba(0, 255, 136, 0.2);
+  }
+
+  /* ── Section Header Line ────────────────────────────────────────────────── */
+  .section-line {
+    @apply flex items-center gap-3;
+  }
+  .section-line::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(0, 255, 136, 0.3), transparent);
   }
 }

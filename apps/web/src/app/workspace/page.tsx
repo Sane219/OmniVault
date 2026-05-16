@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   Upload, FileText, Settings, Activity, Network,
   CheckCircle2, AlertCircle, Loader2, ChevronLeft,
-  ChevronRight, Clock, Key
+  ChevronRight, Clock, Key, Shield
 } from 'lucide-react'
 import { useStore } from '../../store/useStore'
 import { ApiKeyModal } from '../../components/ApiKeyModal'
@@ -27,13 +27,13 @@ interface DocumentRecord {
 // ── Status Badge ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
-    uploaded: 'bg-gray-700 text-gray-300',
-    processing: 'bg-yellow-900/40 text-yellow-300',
-    completed: 'bg-green-900/40 text-green-300',
-    failed: 'bg-red-900/40 text-red-300',
+    uploaded: 'text-text-dim',
+    processing: 'text-amber border border-amber/30',
+    completed: 'text-matrix-green border border-matrix-green/30',
+    failed: 'text-red-alert border border-red-alert/30',
   }
   return (
-    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${map[status] ?? 'bg-gray-700 text-gray-400'}`}>
+    <span className={`neon-badge ${map[status] ?? 'text-text-dim'}`}>
       {status.toUpperCase()}
     </span>
   )
@@ -41,18 +41,18 @@ function StatusBadge({ status }: { status: string }) {
 
 // ── Status Icon ─────────────────────────────────────────────────────────────
 function StatusIcon({ status }: { status: ProcessingStatus }) {
-  if (status === 'idle') return <div className="w-3 h-3 rounded-full bg-gray-600" />
+  if (status === 'idle') return <div className="w-3 h-3 rounded-full bg-matrix-green-dim" />
   if (status === 'uploading' || status === 'processing') {
     return (
-      <div className="flex gap-1">
+      <div className="flex gap-1 animate-glow-pulse">
         {[0, 150, 300].map((delay) => (
-          <div key={delay} className="w-2 h-2 rounded-full bg-cta animate-bounce" style={{ animationDelay: `${delay}ms` }} />
+          <div key={delay} className="w-2 h-2 rounded-full bg-matrix-green shadow-neon" style={{ animationDelay: `${delay}ms` }} />
         ))}
       </div>
     )
   }
-  if (status === 'completed') return <CheckCircle2 className="w-6 h-6 text-cta" />
-  if (status === 'failed' || status === 'error') return <AlertCircle className="w-6 h-6 text-red-400" />
+  if (status === 'completed') return <CheckCircle2 className="w-6 h-6 text-matrix-green" />
+  if (status === 'failed' || status === 'error') return <AlertCircle className="w-6 h-6 text-red-alert shadow-neon-red" />
   return null
 }
 
@@ -72,8 +72,6 @@ export default function WorkspacePage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
-
-  const router = useRef<any>(null) // Use router if available or redirect manually
 
   // ── Auth Guard ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -120,7 +118,6 @@ export default function WorkspacePage() {
     }
   }, [fetchHistory])
 
-  // Fallback polling if WebSocket fails
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const stopPolling = useCallback(() => {
     if (pollIntervalRef.current) {
@@ -268,7 +265,6 @@ export default function WorkspacePage() {
     setErrorMessage('')
     setActiveDocument(doc.id)
 
-    // Fetch document URL for PDF viewer
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/document/${doc.id}/status`, { headers: authHeaders() })
       if (res.ok) {
@@ -297,28 +293,31 @@ export default function WorkspacePage() {
   const hasError = processingStatus === 'failed' || processingStatus === 'error'
 
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden text-text font-sans">
+    <div className="flex h-screen w-full bg-void overflow-hidden text-text-normal font-sans relative">
+      {/* Ambient orbs — matrix green at very low opacity */}
+      <div className="orb w-[500px] h-[500px] bg-matrix-green/[0.04] top-[-150px] right-[-100px]" />
+      <div className="orb w-[300px] h-[300px] bg-matrix-green/[0.02] bottom-[100px] left-[200px]" />
 
-      {/* ── Mobile Overlay ─────────────────────────────────────────────────── */}
+      {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* ── History Sidebar ─────────────────────────────────────────────────── */}
-      <div className={`fixed md:relative z-40 flex flex-col bg-secondary/40 border-r border-gray-800 transition-all duration-300 h-full ${
+      {/* History Sidebar */}
+      <div className={`fixed md:relative z-40 flex flex-col bg-terminal border-r border-panel-border transition-all duration-300 h-full ${
         sidebarOpen ? 'w-64 translate-x-0' : 'w-0 -translate-x-full md:translate-x-0 md:overflow-hidden'
       }`}>
-        <div className="h-14 border-b border-gray-800 flex items-center justify-between px-4 shrink-0">
-          <div className="flex items-center">
-            <Clock className="w-4 h-4 text-cta mr-2 shrink-0" />
-            <span className="font-mono text-xs font-semibold tracking-wider text-gray-300 truncate">DOCUMENT HISTORY</span>
+        <div className="h-14 border-b border-panel-border flex items-center justify-between px-4 shrink-0">
+          <div className="section-line">
+            <Clock className="w-4 h-4 text-matrix-green shrink-0" />
+            <span className="font-mono text-xs font-semibold tracking-widest text-text-bright truncate uppercase">Document History</span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="md:hidden p-1 text-gray-400 hover:text-white cursor-pointer"
+            className="md:hidden p-1 text-text-dim hover:text-matrix-green cursor-pointer transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -326,7 +325,7 @@ export default function WorkspacePage() {
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {historyLoading && <DocumentListSkeleton />}
           {!historyLoading && history.length === 0 && (
-            <p className="text-xs text-gray-600 text-center py-8 px-2">No documents yet. Upload a PDF to get started.</p>
+            <p className="text-xs text-text-dim text-center py-8 px-2 font-mono">No documents yet. Upload a PDF to get started.</p>
           )}
           {history.map((doc) => (
             <button
@@ -335,18 +334,18 @@ export default function WorkspacePage() {
                 handleSelectDocument(doc)
                 if (window.innerWidth < 768) setSidebarOpen(false)
               }}
-              className={`w-full text-left px-3 py-2.5 rounded-lg transition-all cursor-pointer group ${
+              className={`w-full text-left px-3 py-2.5 rounded-panel transition-all cursor-pointer group hover-glitch ${
                 activeDocument === doc.id
-                  ? 'bg-cta/10 border border-cta/30'
-                  : 'hover:bg-white/5 border border-transparent'
+                  ? 'bg-matrix-green-faint border border-panel-border-hover'
+                  : 'hover:bg-panel-hover border border-transparent'
               }`}
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="text-xs text-gray-300 font-medium truncate flex-1">{doc.title}</p>
+                <p className="text-xs text-text-normal font-medium truncate flex-1">{doc.title}</p>
                 <StatusBadge status={doc.status} />
               </div>
               {doc.created_at && (
-                <p className="text-[10px] text-gray-600 mt-1">
+                <p className="text-[10px] text-text-dim mt-1 font-mono">
                   {new Date(doc.created_at).toLocaleDateString()}
                 </p>
               )}
@@ -355,78 +354,78 @@ export default function WorkspacePage() {
         </div>
       </div>
 
-      {/* ── Sidebar Toggle (desktop only) ──────────────────────────────────── */}
+      {/* Sidebar Toggle (desktop only) */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="hidden md:flex absolute top-1/2 z-20 -translate-y-1/2 w-5 h-10 bg-secondary border border-gray-700 rounded-r-md items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-all cursor-pointer"
+        className="hidden md:flex absolute top-1/2 z-20 -translate-y-1/2 w-5 h-10 bg-terminal border border-panel-border rounded-r-terminal items-center justify-center text-text-dim hover:text-matrix-green hover:border-panel-border-hover transition-all cursor-pointer"
         style={{ left: sidebarOpen ? '256px' : '0px' }}
       >
         {sidebarOpen ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
       </button>
 
-      {/* ── Icon Sidebar (hidden on mobile) ─────────────────────────────────── */}
-      <div className="hidden md:flex w-16 flex-col items-center py-6 bg-secondary/50 border-r border-gray-800 shrink-0 gap-8 z-10">
-        <div className="w-10 h-10 rounded-xl bg-cta flex items-center justify-center text-white font-bold shadow-lg shadow-cta/20">
-          O
+      {/* Icon Sidebar (hidden on mobile) */}
+      <div className="hidden md:flex w-16 flex-col items-center py-6 bg-terminal border-r border-panel-border shrink-0 gap-8 z-10">
+        <div className="w-10 h-10 rounded-panel bg-matrix-green-faint border border-panel-border flex items-center justify-center shadow-neon">
+          <Shield className="w-5 h-5 text-matrix-green" />
         </div>
         <div className="flex flex-col gap-4 mt-4">
-          <button className="p-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all cursor-pointer">
-            <Activity className="w-6 h-6" />
+          <button className="p-3 text-text-dim hover:text-matrix-green hover:bg-matrix-green-faint rounded-panel transition-all cursor-pointer hover-glitch">
+            <Activity className="w-5 h-5" />
           </button>
-          <button className="p-3 text-white bg-white/10 rounded-xl shadow-inner transition-all cursor-pointer">
-            <Network className="w-6 h-6" />
+          <button className="p-3 text-matrix-green bg-matrix-green-faint rounded-panel border border-panel-border-hover transition-all cursor-pointer">
+            <Network className="w-5 h-5" />
           </button>
         </div>
         <div className="mt-auto">
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="p-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all cursor-pointer"
+            className="p-3 text-text-dim hover:text-matrix-green hover:bg-matrix-green-faint rounded-panel transition-all cursor-pointer hover-glitch"
           >
-            <Settings className="w-6 h-6" />
+            <Settings className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      {/* ── Mobile Bottom Bar ────────────────────────────────────────────────── */}
-      <div className="fixed bottom-0 left-0 right-0 md:hidden z-20 flex items-center justify-around py-2 bg-secondary/90 border-t border-gray-800 backdrop-blur">
+      {/* Mobile Bottom Bar */}
+      <div className="fixed bottom-0 left-0 right-0 md:hidden z-20 flex items-center justify-around py-2 bg-terminal border-t border-panel-border">
         <button
           onClick={() => setSidebarOpen(true)}
-          className="p-2 text-gray-400 hover:text-white cursor-pointer"
+          className="p-2 text-text-dim hover:text-matrix-green cursor-pointer transition-colors"
         >
           <Clock className="w-5 h-5" />
         </button>
-        <button className="p-2 text-gray-400 hover:text-white cursor-pointer">
+        <button className="p-2 text-text-dim hover:text-matrix-green cursor-pointer transition-colors">
           <Activity className="w-5 h-5" />
         </button>
-        <div className="w-8 h-8 rounded-lg bg-cta flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-cta/20">
-          O
+        <div className="w-8 h-8 rounded-terminal bg-matrix-green-faint border border-panel-border flex items-center justify-center shadow-neon">
+          <Shield className="w-4 h-4 text-matrix-green" />
         </div>
-        <button className="p-2 text-white bg-white/10 rounded-lg cursor-pointer">
+        <button className="p-2 text-matrix-green bg-matrix-green-faint rounded-terminal border border-panel-border-hover cursor-pointer">
           <Network className="w-5 h-5" />
         </button>
         <button
           onClick={() => setIsSettingsOpen(true)}
-          className="p-2 text-gray-400 hover:text-white cursor-pointer"
+          className="p-2 text-text-dim hover:text-matrix-green cursor-pointer transition-colors"
         >
           <Settings className="w-5 h-5" />
         </button>
       </div>
 
-      {/* ── Main Split ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row flex-1 overflow-hidden min-w-0 pb-14 md:pb-0">
+      {/* Main Split */}
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden min-w-0 pb-14 md:pb-0 relative z-10">
 
-        {/* ── Left: Document Viewer ── */}
-        <div className="flex-1 border-r border-gray-800 flex flex-col bg-background/50 min-w-0">
-          <div className="h-14 border-b border-gray-800 flex items-center justify-between px-6 bg-secondary/30 shrink-0">
-            <h2 className="font-mono text-sm font-semibold tracking-wider text-gray-300 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-cta" /> DOCUMENT VIEWER
+        {/* Left: Document Viewer */}
+        <div className="flex-1 border-r border-panel-border flex flex-col min-w-0">
+          <div className="h-14 border-b border-panel-border flex items-center justify-between px-6 bg-terminal shrink-0">
+            <h2 className="section-line font-mono text-sm font-semibold tracking-widest text-text-bright flex items-center gap-2 uppercase">
+              <FileText className="w-4 h-4 text-matrix-green" /> Document Viewer
             </h2>
             <div className="flex gap-3">
               <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="application/pdf" />
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isBusy}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-gray-700 border border-gray-700 rounded-lg text-white transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-neon flex items-center gap-2"
               >
                 {processingStatus === 'uploading' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                 {processingStatus === 'uploading' ? 'UPLOADING...' : 'UPLOAD PDF'}
@@ -435,38 +434,40 @@ export default function WorkspacePage() {
           </div>
           <div className="flex-1 p-6 overflow-hidden">
             {activeDocument && documentUrl ? (
-              <div className="w-full h-full min-h-[400px] border border-gray-800 rounded-xl bg-secondary/20 shadow-inner overflow-hidden">
+              <div className="w-full h-full min-h-[400px] neon-panel overflow-hidden">
                 <PdfViewer url={documentUrl} />
               </div>
             ) : activeDocument ? (
-              <div className="w-full h-full min-h-[400px] border border-gray-800 rounded-xl bg-secondary/20 shadow-inner flex items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+              <div className="w-full h-full min-h-[400px] neon-panel flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-matrix-green/[0.02] to-transparent pointer-events-none" />
                 <div className="text-center">
-                  <Loader2 className="w-10 h-10 text-gray-600 mx-auto mb-4 animate-spin" />
-                  <p className="text-xs text-gray-600 font-mono">Loading document...</p>
+                  <Loader2 className="w-10 h-10 text-matrix-green-dim mx-auto mb-4 animate-spin" />
+                  <p className="text-xs text-text-dim font-mono">Loading document...</p>
                 </div>
               </div>
             ) : (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full h-full min-h-[400px] border border-dashed border-gray-700 rounded-xl flex flex-col items-center justify-center text-gray-500 hover:border-gray-500 hover:bg-white/[0.02] transition-colors cursor-pointer"
+                className="w-full h-full min-h-[400px] border-2 border-dashed border-matrix-green-dim rounded-panel flex flex-col items-center justify-center text-text-dim hover:border-matrix-green hover:shadow-neon hover:bg-matrix-green-faint transition-all cursor-pointer hover-glitch group"
               >
-                <Upload className="w-12 h-12 mb-4 text-gray-600" />
-                <p>No document selected</p>
-                <p className="text-sm mt-1">Click or upload a PDF to begin</p>
+                <div className="w-16 h-16 rounded-panel bg-matrix-green-faint border border-panel-border flex items-center justify-center mb-4 group-hover:border-panel-border-hover group-hover:shadow-neon transition-all">
+                  <Upload className="w-8 h-8 text-matrix-green-dim group-hover:text-matrix-green transition-colors" />
+                </div>
+                <p className="text-text-normal font-medium">No document selected</p>
+                <p className="text-sm mt-1 text-text-dim font-mono">Click or upload a PDF to begin</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* ── Right: Intelligence Panel (Graph + Chat split vertically) ── */}
-        <div className="flex-1 flex flex-col bg-background/50 min-w-0 overflow-hidden">
+        {/* Right: Intelligence Panel (Graph + Chat split vertically) */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-          {/* ── Graph Section (top 60%, 50% on mobile) ── */}
+          {/* Graph Section (top 60%, 50% on mobile) */}
           <div className="flex flex-col h-[50%] md:h-[60%]">
-            <div className="h-14 border-b border-gray-800 flex items-center px-6 bg-secondary/30 shrink-0">
-              <h2 className="font-mono text-sm font-semibold tracking-wider text-gray-300 flex items-center gap-2">
-                <Network className="w-4 h-4 text-cta" /> INTELLIGENCE GRAPH
+            <div className="h-14 border-b border-panel-border flex items-center px-6 bg-terminal shrink-0">
+              <h2 className="section-line font-mono text-sm font-semibold tracking-widest text-text-bright flex items-center gap-2 uppercase">
+                <Network className="w-4 h-4 text-matrix-green" /> Intelligence Graph
               </h2>
             </div>
 
@@ -474,15 +475,15 @@ export default function WorkspacePage() {
 
               {/* Error Banner (Failed) */}
               {processingStatus === 'failed' && (
-                <div className="p-3 rounded-xl bg-red-900/20 border border-red-700 flex items-start gap-3 shrink-0">
-                  <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                <div className="p-3 rounded-panel bg-red-alert/10 border border-red-alert/30 flex items-start gap-3 shrink-0 shadow-neon-red">
+                  <AlertCircle className="w-5 h-5 text-red-alert shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-red-300">Processing Failed</p>
-                    <p className="text-xs text-red-400/80 mt-1">{errorMessage}</p>
+                    <p className="text-sm font-semibold text-red-alert">Processing Failed</p>
+                    <p className="text-xs text-red-alert/70 mt-1">{errorMessage}</p>
                   </div>
                   <button
                     onClick={() => setIsSettingsOpen(true)}
-                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-900/40 hover:bg-red-900/60 border border-red-700 rounded-lg text-red-300 transition-all cursor-pointer"
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-alert/10 hover:bg-red-alert/20 border border-red-alert/30 rounded-terminal text-red-alert transition-all cursor-pointer"
                   >
                     <Key className="w-3 h-3" /> Fix API Key
                   </button>
@@ -490,12 +491,16 @@ export default function WorkspacePage() {
               )}
 
               {/* Status Bar */}
-              <div className={`flex items-center gap-4 p-3 rounded-xl border transition-colors shrink-0 ${
-                hasError ? 'bg-red-900/20 border-red-800' : 'bg-secondary/30 border-gray-800'
+              <div className={`flex items-center gap-4 p-3 rounded-panel border transition-all shrink-0 ${
+                hasError
+                  ? 'bg-red-alert/10 border-red-alert/30 shadow-neon-red'
+                  : isBusy
+                    ? 'neon-panel animate-glow-pulse'
+                    : 'neon-panel'
               }`}>
                 <div className="flex-1">
-                  <h4 className="text-sm font-medium text-gray-300">Processing Status</h4>
-                  <div className={`text-xs mt-0.5 ${hasError ? 'text-red-400' : 'text-gray-500'}`}>
+                  <h4 className="text-sm font-medium text-text-bright font-mono tracking-wider uppercase">Processing Status</h4>
+                  <div className={`text-xs mt-0.5 font-mono ${hasError ? 'text-red-alert' : 'text-text-dim'}`}>
                     {hasError && processingStatus !== 'failed' ? errorMessage : statusMessage}
                   </div>
                 </div>
@@ -503,8 +508,7 @@ export default function WorkspacePage() {
               </div>
 
               {/* Graph Visualization */}
-              <div className="flex-1 border border-gray-800 rounded-xl bg-[#0B1120] relative overflow-hidden min-h-0">
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+              <div className="flex-1 neon-panel relative overflow-hidden min-h-0 grid-bg">
 
                 {processingStatus === 'completed' && graphData ? (
                   <div className="absolute inset-0">
@@ -515,9 +519,11 @@ export default function WorkspacePage() {
                 ) : isBusy ? (
                   <GraphSkeleton />
                 ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-600">
-                    <Network className="w-12 h-12 mb-3 opacity-50" />
-                    <p className="font-mono text-xs uppercase tracking-widest">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-text-dim">
+                    <div className="w-16 h-16 rounded-panel bg-matrix-green-faint border border-panel-border flex items-center justify-center mb-3">
+                      <Network className="w-8 h-8 text-matrix-green-dim" />
+                    </div>
+                    <p className="font-mono text-xs uppercase tracking-widest text-text-dim">
                       {hasError ? 'Processing Failed' : 'Waiting for Data'}
                     </p>
                   </div>
@@ -527,7 +533,7 @@ export default function WorkspacePage() {
             </div>
           </div>
 
-          {/* ── Chat Section (bottom 40%) ── */}
+          {/* Chat Section (bottom 40%) */}
           <div className="flex-1 min-h-0 overflow-hidden">
             <ErrorBoundary label="Chat">
               <ChatPanel />

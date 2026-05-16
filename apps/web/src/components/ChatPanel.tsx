@@ -4,10 +4,6 @@ import { Send, Bot, User, X, Loader2, MessageSquare, AlertTriangle } from 'lucid
 import { useStore, ChatMessage } from '../store/useStore'
 import { authHeaders } from '../lib/auth'
 
-/**
- * Parses SSE-formatted text: "data: <text>\n\n"
- * Returns the joined data content.
- */
 function parseSSEChunk(raw: string): string {
   return raw
     .split('\n')
@@ -26,7 +22,6 @@ export function ChatPanel() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  // Sync local messages with store when document changes
   useEffect(() => {
     if (activeDocument !== prevDocRef.current) {
       prevDocRef.current = activeDocument
@@ -91,7 +86,6 @@ export function ChatPanel() {
         const parsed = parseSSEChunk(raw)
         if (!parsed) continue
 
-        // ── Check for streamed error from backend ─────────────────────────
         if (parsed.startsWith('ERROR:')) {
           const errorText = parsed.slice(6).trim()
           setMessages((prev) =>
@@ -101,12 +95,10 @@ export function ChatPanel() {
                 : msg
             )
           )
-          // Drain and close the reader then stop
           reader.cancel()
           break
         }
 
-        // ── Append valid chunk ─────────────────────────────────────────────
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === aiMsgId
@@ -139,23 +131,23 @@ export function ChatPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background/50 border-t border-gray-800">
+    <div className="flex flex-col h-full bg-terminal/30 border-t border-panel-border">
 
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="h-12 px-4 border-b border-gray-800 bg-secondary/30 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="w-4 h-4 text-cta" />
-          <span className="font-mono text-xs font-semibold tracking-wider text-gray-300">RAG CHAT</span>
+      {/* Header */}
+      <div className="h-12 px-4 border-b border-panel-border bg-panel/40 flex items-center justify-between shrink-0">
+        <div className="section-line">
+          <MessageSquare className="w-4 h-4 text-matrix-green" />
+          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-text-bright">RAG CHAT</span>
         </div>
         {selectedNode && (
-          <div className="flex items-center gap-2 px-2 py-1 bg-cta/10 border border-cta/30 rounded-lg">
-            <span className="text-[10px] font-mono text-cta/80">Context:</span>
-            <span className="text-[10px] font-mono font-bold text-cta truncate max-w-[120px]">
+          <div className="flex items-center gap-2 px-2.5 py-1 bg-matrix-green-faint border border-matrix-green-dim rounded-terminal">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-text-dim">ctx:</span>
+            <span className="text-[10px] font-mono font-bold text-matrix-green truncate max-w-[120px]">
               {selectedNode.label}
             </span>
             <button
               onClick={() => setSelectedNode(null)}
-              className="text-gray-500 hover:text-gray-300 cursor-pointer transition-colors ml-1"
+              className="text-text-dim hover:text-matrix-green cursor-pointer transition-colors ml-1 hover-glitch"
             >
               <X className="w-3 h-3" />
             </button>
@@ -163,15 +155,17 @@ export function ChatPanel() {
         )}
       </div>
 
-      {/* ── Messages ────────────────────────────────────────────────────────── */}
+      {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center text-gray-600 gap-3">
-            <Bot className="w-10 h-10 opacity-40" />
-            <p className="text-sm">
+          <div className="flex flex-col items-center justify-center h-full text-center text-text-dim gap-3">
+            <div className="w-12 h-12 rounded-terminal bg-panel border border-panel-border flex items-center justify-center">
+              <Bot className="w-6 h-6 text-matrix-green/30" />
+            </div>
+            <p className="text-sm font-mono">
               {activeDocument
-                ? 'Ask anything about this document.\nClick a graph node to focus your question.'
-                : 'Upload a document to start chatting.'}
+                ? 'Query the document intelligence engine.\nSelect a graph node to focus context.'
+                : 'Upload a document to initialize chat.'}
             </p>
           </div>
         )}
@@ -182,45 +176,42 @@ export function ChatPanel() {
             className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
           >
             {/* Avatar */}
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+            <div className={`w-7 h-7 rounded-terminal flex items-center justify-center shrink-0 mt-0.5 border ${
               msg.isError
-                ? 'bg-red-900/40 border border-red-500/40'
+                ? 'bg-red-alert/10 border-red-alert/30'
                 : msg.role === 'user'
-                  ? 'bg-cta/20 border border-cta/40'
-                  : 'bg-blue-900/40 border border-blue-500/40'
+                  ? 'bg-matrix-green-faint border-matrix-green-dim'
+                  : 'bg-blue-data/10 border-blue-data/30'
             }`}>
               {msg.isError
-                ? <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+                ? <AlertTriangle className="w-3.5 h-3.5 text-red-alert" />
                 : msg.role === 'user'
-                  ? <User className="w-3.5 h-3.5 text-cta" />
-                  : <Bot className="w-3.5 h-3.5 text-blue-400" />}
+                  ? <User className="w-3.5 h-3.5 text-matrix-green" />
+                  : <Bot className="w-3.5 h-3.5 text-blue-data" />}
             </div>
 
             {/* Bubble */}
-            <div className={`max-w-[85%] px-3 py-2 rounded-xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
+            <div className={`max-w-[85%] px-3.5 py-2.5 rounded-terminal text-sm leading-relaxed whitespace-pre-wrap break-words border ${
               msg.isError
-                ? 'bg-red-900/20 border border-red-700 text-red-300 rounded-tl-none'
+                ? 'bg-red-alert/5 border-red-alert/20 text-red-alert rounded-tl-none'
                 : msg.role === 'user'
-                  ? 'bg-cta/10 border border-cta/20 text-gray-200 rounded-tr-none'
-                  : 'bg-secondary/60 border border-gray-700 text-gray-300 rounded-tl-none'
+                  ? 'bg-matrix-green-faint border-matrix-green-dim text-text-normal rounded-tr-none'
+                  : 'bg-panel border-panel-border text-text-normal rounded-tl-none'
             }`}>
-              {/* Bouncing dots before first token arrives */}
               {!msg.content && streaming && msg.role === 'assistant' && !msg.isError && (
                 <span className="inline-flex gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-matrix-green animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-matrix-green animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-matrix-green animate-bounce" style={{ animationDelay: '300ms' }} />
                 </span>
               )}
               {msg.content}
-              {/* Blinking cursor while streaming this message */}
               {streaming && msg.role === 'assistant' && msg.content && !msg.isError && (
-                <span className="inline-block w-0.5 h-4 bg-cta/70 ml-0.5 align-middle animate-pulse" />
+                <span className="inline-block w-0.5 h-4 bg-matrix-green/70 ml-0.5 align-middle animate-pulse" />
               )}
-              {/* Error label */}
               {msg.isError && (
-                <div className="flex items-center gap-1 mt-2 text-[10px] text-red-500 font-mono">
-                  <AlertTriangle className="w-3 h-3" /> AI error — check your API key or try again
+                <div className="flex items-center gap-1 mt-2 text-[10px] text-red-alert font-mono uppercase tracking-wider">
+                  <AlertTriangle className="w-3 h-3" /> system error — verify api key
                 </div>
               )}
             </div>
@@ -228,12 +219,12 @@ export function ChatPanel() {
         ))}
       </div>
 
-      {/* ── Input ───────────────────────────────────────────────────────────── */}
-      <div className="px-4 py-3 border-t border-gray-800 bg-secondary/20 shrink-0">
-        <div className={`flex gap-2 items-end rounded-xl border transition-colors ${
+      {/* Input */}
+      <div className="px-4 py-3 border-t border-panel-border bg-panel/20 shrink-0">
+        <div className={`flex gap-2 items-end rounded-terminal border transition-all duration-100 ${
           activeDocument
-            ? 'border-gray-700 focus-within:border-cta/50 bg-background/60'
-            : 'border-gray-800 bg-background/20 opacity-50'
+            ? 'border-matrix-green-dim focus-within:border-matrix-green focus-within:shadow-neon bg-black/40'
+            : 'border-text-ghost bg-black/20 opacity-40'
         }`}>
           <textarea
             ref={inputRef}
@@ -243,26 +234,26 @@ export function ChatPanel() {
             disabled={!activeDocument || streaming}
             placeholder={
               !activeDocument
-                ? 'Upload a document first...'
+                ? 'awaiting document upload...'
                 : selectedNode
-                ? `Ask about "${selectedNode.label}"…`
-                : 'Ask anything about this document…'
+                ? `query "${selectedNode.label}"…`
+                : 'enter query…'
             }
             rows={1}
-            className="flex-1 bg-transparent text-sm text-gray-300 placeholder-gray-600 resize-none px-3 py-2.5 focus:outline-none disabled:cursor-not-allowed min-h-[40px] max-h-[120px]"
+            className="flex-1 bg-transparent text-sm text-text-normal placeholder-text-dim resize-none px-3 py-2.5 focus:outline-none disabled:cursor-not-allowed min-h-[40px] max-h-[120px] font-mono"
             style={{ fieldSizing: 'content' } as React.CSSProperties}
           />
           <button
             onClick={sendMessage}
             disabled={!activeDocument || !input.trim() || streaming}
-            className="mb-1.5 mr-1.5 p-2 bg-cta hover:bg-green-500 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg text-white transition-colors cursor-pointer shrink-0"
+            className="mb-1.5 mr-1.5 p-2 bg-transparent border border-matrix-green text-matrix-green hover:bg-matrix-green-faint hover:shadow-neon disabled:border-text-ghost disabled:text-text-ghost disabled:hover:bg-transparent disabled:hover:shadow-none rounded-terminal transition-all cursor-pointer shrink-0"
           >
             {streaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </button>
         </div>
-        <p className="text-[10px] text-gray-600 mt-1.5 text-center">
-          Press <kbd className="px-1 bg-gray-800 rounded text-gray-500">Enter</kbd> to send ·{' '}
-          <kbd className="px-1 bg-gray-800 rounded text-gray-500">Shift+Enter</kbd> for newline
+        <p className="text-[10px] text-text-dim mt-1.5 text-center font-mono uppercase tracking-wider">
+          <kbd className="px-1 bg-panel border border-panel-border rounded-terminal text-text-dim">Enter</kbd> transmit ·{' '}
+          <kbd className="px-1 bg-panel border border-panel-border rounded-terminal text-text-dim">Shift+Enter</kbd> newline
         </p>
       </div>
     </div>

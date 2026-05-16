@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useStore } from '../store/useStore'
-import { Lock, Mail } from 'lucide-react'
+import { Lock, Mail, Shield } from 'lucide-react'
 import Link from 'next/link'
 
 export function LoginForm() {
@@ -10,7 +10,7 @@ export function LoginForm() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  
+
   const { setAccessToken, setUserEmail } = useStore()
   const router = useRouter()
 
@@ -18,27 +18,26 @@ export function LoginForm() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    
+
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       })
-      
+
       if (!res.ok) {
-        // Handle mock fallback if no backend is present, for UI demonstration
         throw new Error('Login failed')
       }
-      
+
       const data = await res.json()
-      const token = data.access_token  // backend returns snake_case
-      
+      const token = data.access_token
+
       setAccessToken(token)
       setUserEmail(email)
-      
+
       document.cookie = `omnivault_token=${token}; path=/; max-age=86400; SameSite=Strict`
-      
+
       router.push('/workspace')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed. Please try again.')
@@ -48,58 +47,72 @@ export function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-md p-8 rounded-xl bg-secondary/80 backdrop-blur-xl border border-gray-800 shadow-2xl relative z-10">
-      <h2 className="text-2xl font-bold mb-2 font-mono text-white">Access Vault</h2>
-      <p className="text-gray-400 text-sm mb-6">Enter your credentials to continue.</p>
-      
-      {error && <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 text-red-200 rounded text-sm">{error}</div>}
-      
+    <div className="w-full max-w-md p-8 neon-panel-elevated crt-scanlines rounded-terminal relative z-10">
+      {/* Brand */}
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-10 h-10 rounded-terminal bg-matrix-green/10 border border-matrix-green flex items-center justify-center shadow-neon">
+          <Shield className="w-5 h-5 text-matrix-green" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-bright font-mono uppercase tracking-widest">OmniVault</h2>
+          <p className="text-xs text-dim font-mono tracking-wider">TERMINAL ACCESS</p>
+        </div>
+      </div>
+
+      <p className="text-text-normal text-sm mb-6">Enter your credentials to continue.</p>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-alert/10 border border-red-alert/30 text-red-alert rounded-terminal text-sm">
+          {error}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
+          <label className="block text-sm font-medium text-text-normal mb-1.5">Email</label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Mail className="h-4 w-4 text-gray-500" />
+              <Mail className="h-4 w-4 text-dim" />
             </div>
-            <input 
-              type="email" 
+            <input
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-700 rounded-md leading-5 bg-background text-gray-300 placeholder-gray-500 focus:outline-none focus:border-cta focus:ring-1 focus:ring-cta sm:text-sm transition-colors duration-200"
+              className="neon-input block w-full pl-10 pr-3 py-2.5 text-sm"
               placeholder="you@example.com"
               required
             />
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-400 mb-1">Password</label>
+          <label className="block text-sm font-medium text-text-normal mb-1.5">Password</label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Lock className="h-4 w-4 text-gray-500" />
+              <Lock className="h-4 w-4 text-dim" />
             </div>
-            <input 
-              type="password" 
+            <input
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-700 rounded-md leading-5 bg-background text-gray-300 placeholder-gray-500 focus:outline-none focus:border-cta focus:ring-1 focus:ring-cta sm:text-sm transition-colors duration-200"
+              className="neon-input block w-full pl-10 pr-3 py-2.5 text-sm"
               placeholder="••••••••"
               required
             />
           </div>
         </div>
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           disabled={loading}
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cta hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cta focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 cursor-pointer mt-6"
+          className="btn-neon w-full mt-6"
         >
-          {loading ? 'Authenticating...' : 'Enter Vault'}
+          {loading ? 'Authenticating...' : 'Sign In'}
         </button>
       </form>
-      
-      <p className="mt-6 text-center text-sm text-gray-500">
+
+      <p className="mt-6 text-center text-sm text-text-dim">
         Don&apos;t have an account?{' '}
-        <Link href="/register" className="text-cta hover:text-green-400 transition-colors">
-          Initialize Access
+        <Link href="/register" className="text-matrix-green hover:text-bright transition-colors duration-100">
+          Create one
         </Link>
       </p>
     </div>
