@@ -59,8 +59,7 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
-[INSERT CONTACT METHOD].
+reported to the community leaders responsible for enforcement.
 All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the
@@ -76,7 +75,7 @@ the consequences for any action they deem in violation of this Code of Conduct:
 **Community Impact**: A minor violation that does not represent a serious risk
 to the wellbeing of the community.
 
-**Consequence**: A private, written public warning from community leaders, and
+**Consequence**: A private, written warning from community leaders, and
 an explanation of why the behavior was inappropriate. A public apology may be
 requested.
 
@@ -118,7 +117,7 @@ version 2.1, available at
 https://www.contributor-covenant.org/version/2/1/code_of_conduct.html.
 
 Community Impact Guidelines were inspired by
-[Mozilla's code of conduct enforcement ladder][https://github.com/mozilla/diversity].
+[Mozilla's code of conduct enforcement ladder](https://github.com/mozilla/diversity).
 
 For answers to common questions about this code of conduct, see the FAQ at
 https://www.contributor-covenant.org/faq. Translations are available at

@@ -120,6 +120,42 @@ export default function WorkspacePage() {
     }
   }, [fetchHistory])
 
+  // Fallback polling if WebSocket fails
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current)
+      pollIntervalRef.current = null
+    }
+  }, [])
+
+  const startPollingFallback = useCallback((documentId: string) => {
+    stopPolling()
+    pollIntervalRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/document/${documentId}/status`, { headers: authHeaders() })
+        if (!res.ok) return
+        const data = await res.json()
+
+        if (data.file_path) setDocumentUrl(data.file_path)
+
+        if (data.status === 'completed') {
+          stopPolling()
+          await fetchGraph(documentId)
+        } else if (data.status === 'failed') {
+          stopPolling()
+          setProcessingStatus('failed')
+          setErrorMessage(data.error_message || 'Processing failed.')
+          await fetchHistory()
+        }
+      } catch (err) {
+        stopPolling()
+        setProcessingStatus('error')
+        setErrorMessage(err instanceof Error ? err.message : 'Polling failed.')
+      }
+    }, 2000)
+  }, [stopPolling, fetchGraph, fetchHistory])
+
   const connectWs = useCallback((documentId: string) => {
     closeWs()
 
@@ -160,7 +196,6 @@ export default function WorkspacePage() {
     }
 
     ws.onerror = () => {
-      // Fallback: WS failed, use polling
       console.warn('WebSocket failed, falling back to polling')
       startPollingFallback(documentId)
     }
@@ -169,42 +204,6 @@ export default function WorkspacePage() {
       wsRef.current = null
     }
   }, [closeWs, fetchGraph, fetchHistory, startPollingFallback])
-
-  // Fallback polling if WebSocket fails
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const stopPolling = useCallback(() => {
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current)
-      pollIntervalRef.current = null
-    }
-  }, [])
-
-  const startPollingFallback = useCallback((documentId: string) => {
-    stopPolling()
-    pollIntervalRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/document/${documentId}/status`, { headers: authHeaders() })
-        if (!res.ok) return
-        const data = await res.json()
-
-        if (data.file_path) setDocumentUrl(data.file_path)
-
-        if (data.status === 'completed') {
-          stopPolling()
-          await fetchGraph(documentId)
-        } else if (data.status === 'failed') {
-          stopPolling()
-          setProcessingStatus('failed')
-          setErrorMessage(data.error_message || 'Processing failed.')
-          await fetchHistory()
-        }
-      } catch (err) {
-        stopPolling()
-        setProcessingStatus('error')
-        setErrorMessage(err instanceof Error ? err.message : 'Polling failed.')
-      }
-    }, 2000)
-  }, [stopPolling, fetchGraph, fetchHistory])
 
   // ── Initial history load ─────────────────────────────────────────────────────
   useEffect(() => {

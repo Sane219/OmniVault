@@ -180,6 +180,7 @@ version = "0.1.0"
 source = { editable = "apps/api-core" }
 dependencies = [
     { name = "bcrypt" },
+    { name = "cryptography" },
     { name = "hatchet-sdk" },
     { name = "pyjwt" },
     { name = "python-dotenv" },
@@ -196,6 +197,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "bcrypt" },
+    { name = "cryptography", specifier = ">=42.0.0" },
     { name = "hatchet-sdk" },
     { name = "pyjwt" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
@@ -2507,6 +2509,7 @@ name = "worker-ai"
 version = "0.1.0"
 source = { editable = "apps/worker-ai" }
 dependencies = [
+    { name = "cryptography" },
     { name = "google-genai" },
     { name = "hatchet-sdk" },
     { name = "pymupdf" },
@@ -2522,6 +2525,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "cryptography", specifier = ">=42.0.0" },
     { name = "google-genai", specifier = ">=2.0.1" },
     { name = "hatchet-sdk" },
     { name = "pymupdf", specifier = ">=1.27.2.3" },
