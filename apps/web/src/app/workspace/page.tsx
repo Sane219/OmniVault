@@ -293,7 +293,10 @@ export default function WorkspacePage() {
   const hasError = processingStatus === 'failed' || processingStatus === 'error'
 
   return (
-    <div className="flex h-screen w-full bg-void overflow-hidden text-text-normal font-sans relative">
+    <div className="h-screen w-full bg-void overflow-hidden text-text-normal font-sans relative grid grid-cols-[auto_1fr] md:grid-cols-[auto_auto_1fr] grid-rows-1">
+      {/* CRT scanlines — scoped to workspace only */}
+      <div className="crt-scanlines absolute inset-0 pointer-events-none z-50" />
+
       {/* Ambient orbs — matrix green at very low opacity */}
       <div className="orb w-[500px] h-[500px] bg-matrix-green/[0.04] top-[-150px] right-[-100px]" />
       <div className="orb w-[300px] h-[300px] bg-matrix-green/[0.02] bottom-[100px] left-[200px]" />
@@ -306,9 +309,9 @@ export default function WorkspacePage() {
         />
       )}
 
-      {/* History Sidebar */}
+      {/* History Sidebar — col 1 on mobile (overlay), col 1 on desktop */}
       <div className={`fixed md:relative z-40 flex flex-col bg-terminal border-r border-panel-border transition-all duration-300 h-full ${
-        sidebarOpen ? 'w-64 translate-x-0' : 'w-0 -translate-x-full md:translate-x-0 md:overflow-hidden'
+        sidebarOpen ? 'w-64 translate-x-0' : 'w-0 -translate-x-full md:translate-x-0 md:overflow-hidden md:w-0'
       }`}>
         <div className="h-14 border-b border-panel-border flex items-center justify-between px-4 shrink-0">
           <div className="section-line">
@@ -363,7 +366,7 @@ export default function WorkspacePage() {
         {sidebarOpen ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
       </button>
 
-      {/* Icon Sidebar (hidden on mobile) */}
+      {/* Icon Sidebar — col 2 on desktop only */}
       <div className="hidden md:flex w-16 flex-col items-center py-6 bg-terminal border-r border-panel-border shrink-0 gap-8 z-10">
         <div className="w-10 h-10 rounded-panel bg-matrix-green-faint border border-panel-border flex items-center justify-center shadow-neon">
           <Shield className="w-5 h-5 text-matrix-green" />
@@ -411,11 +414,11 @@ export default function WorkspacePage() {
         </button>
       </div>
 
-      {/* Main Split */}
-      <div className="flex flex-col md:flex-row flex-1 overflow-hidden min-w-0 pb-14 md:pb-0 relative z-10">
+      {/* Main Content — col 3 on desktop, full remaining width */}
+      <div className="flex flex-col md:flex-row overflow-hidden min-w-0 pb-14 md:pb-0 relative z-10">
 
-        {/* Left: Document Viewer */}
-        <div className="flex-1 border-r border-panel-border flex flex-col min-w-0">
+        {/* Left: Document Viewer — 50% width */}
+        <div className="w-full md:w-1/2 border-r border-panel-border flex flex-col min-w-0 h-full">
           <div className="h-14 border-b border-panel-border flex items-center justify-between px-6 bg-terminal shrink-0">
             <h2 className="section-line font-mono text-sm font-semibold tracking-widest text-text-bright flex items-center gap-2 uppercase">
               <FileText className="w-4 h-4 text-matrix-green" /> Document Viewer
@@ -460,10 +463,10 @@ export default function WorkspacePage() {
           </div>
         </div>
 
-        {/* Right: Intelligence Panel (Graph + Chat split vertically) */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Right: Intelligence Panel (Graph + Chat split vertically) — 50% width */}
+        <div className="w-full md:w-1/2 flex flex-col min-w-0 overflow-hidden h-full">
 
-          {/* Graph Section (top 60%, 50% on mobile) */}
+          {/* Graph Section (top 60%) */}
           <div className="flex flex-col h-[50%] md:h-[60%]">
             <div className="h-14 border-b border-panel-border flex items-center px-6 bg-terminal shrink-0">
               <h2 className="section-line font-mono text-sm font-semibold tracking-widest text-text-bright flex items-center gap-2 uppercase">

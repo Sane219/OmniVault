@@ -50,3 +50,4 @@ test_*.pdf
 .agent/
 .opencode/
 .claude/
+.mcp.json

@@ -13,9 +13,11 @@
   .neon-panel {
     @apply bg-panel border border-panel-border rounded-panel;
     backdrop-filter: blur(4px);
+    box-shadow: 0 0 5px rgba(0, 255, 136, 0.15), 0 0 15px rgba(0, 255, 136, 0.05);
   }
   .neon-panel:hover {
-    @apply border-panel-border-hover shadow-neon;
+    @apply border-panel-border-hover;
+    box-shadow: 0 0 8px rgba(0, 255, 136, 0.25), 0 0 20px rgba(0, 255, 136, 0.1);
   }
 
   /* ── Elevated Panel (modals, popovers) ──────────────────────────────────── */
@@ -26,11 +28,23 @@
 
   /* ── Input ──────────────────────────────────────────────────────────────── */
   .neon-input {
-    @apply bg-black/80 border border-matrix-green-dim rounded-terminal text-text-normal placeholder-text-dim
-           transition-all duration-100;
+    background: rgba(0, 0, 0, 0.5) !important;
+    border: 1px solid #335533;
+    border-radius: 4px;
+    color: #00ff88 !important;
+    caret-color: #00ff88;
+    transition: all 0.1s ease;
+    -webkit-text-fill-color: #00ff88 !important;
+  }
+  .neon-input::placeholder {
+    color: #4a5a4a !important;
+    -webkit-text-fill-color: #4a5a4a !important;
   }
   .neon-input:focus {
-    @apply border-matrix-green shadow-neon outline-none animate-glitch;
+    border-color: #00ff88;
+    box-shadow: 0 0 5px rgba(0, 255, 136, 0.25), 0 0 15px rgba(0, 255, 136, 0.1), 0 0 0 2px rgba(0, 255, 136, 0.15);
+    outline: none;
+    animation: glitch-jitter 0.15s ease-in-out;
   }
 
   /* ── Primary Button ─────────────────────────────────────────────────────── */
