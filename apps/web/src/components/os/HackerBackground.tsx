@@ -56,10 +56,10 @@ export function HackerBackground() {
         }
       }
 
-      requestAnimationFrame(draw)
+      animFrameId = requestAnimationFrame(draw)
     }
 
-    const animId = requestAnimationFrame(draw)
+    let animFrameId = requestAnimationFrame(draw)
 
     // Handle resize for columns
     const onResize = () => {
@@ -70,7 +70,7 @@ export function HackerBackground() {
     window.addEventListener('resize', onResize)
 
     return () => {
-      cancelAnimationFrame(animId)
+      cancelAnimationFrame(animFrameId)
       window.removeEventListener('resize', resize)
       window.removeEventListener('resize', onResize)
     }

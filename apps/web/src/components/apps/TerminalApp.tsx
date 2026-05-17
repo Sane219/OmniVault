@@ -21,9 +21,9 @@ const FILESYSTEM: Record<string, Record<string, string[]>> = {
   '/viewer/config.json': { type: ['file'], contents: ['{"theme": "hacker", "lang": "en", "maxUploadMB": 50}'] },
   '/chat/history.log': { type: ['file'], contents: ['[2026-05-17 03:12] SYSTEM: Session initiated', '[2026-05-17 03:13] USER: Analyze document structure'] },
   '/chat/sessions.db': { type: ['file'], contents: ['[binary data - 4.2KB]'] },
-  '/files/uploads/': { type: ['dir'], contents: ['report_q1.pdf', 'architecture.pdf'] },
-  '/files/processed/': { type: ['dir'], contents: ['report_q1.json', 'architecture.json'] },
-  '/files/temp/': { type: ['dir'], contents: [] },
+  '/files/uploads': { type: ['dir'], contents: ['report_q1.pdf', 'architecture.pdf'] },
+  '/files/processed': { type: ['dir'], contents: ['report_q1.json', 'architecture.json'] },
+  '/files/temp': { type: ['dir'], contents: [] },
 }
 
 export function TerminalApp() {

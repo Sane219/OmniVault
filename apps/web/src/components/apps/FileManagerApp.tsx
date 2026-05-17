@@ -1,7 +1,8 @@
 "use client"
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useDocumentManager } from '../../lib/useDocumentManager'
 import { useStore, type DocumentRecord } from '../../store/useStore'
+import { authHeaders } from '../../lib/auth'
 import { FolderOpen, Upload, Loader2, Clock, Trash2, Eye, X } from 'lucide-react'
 
 function StatusBadge({ status }: { status: string }) {
@@ -25,24 +26,36 @@ export function FileManagerApp() {
     isBusy, processingStatus,
   } = useDocumentManager()
 
-  const { openWindow, setHistory, setActiveDocument, setDocumentUrl } = useStore()
+  const { focusOrCreateWindow, setHistory, setActiveDocument, setDocumentUrl } = useStore()
   const [previewDoc, setPreviewDoc] = useState<DocumentRecord | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
-  const onSelect = (doc: DocumentRecord) => {
+  const onSelect = useCallback((doc: DocumentRecord) => {
     handleSelectDocument(doc)
-    openWindow('viewer')
-    openWindow('graph')
-  }
+    focusOrCreateWindow('viewer')
+    focusOrCreateWindow('graph')
+  }, [handleSelectDocument, focusOrCreateWindow])
 
-  const onDelete = (docId: string) => {
+  const onDelete = useCallback(async (docId: string) => {
+    setDeleting(docId)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/document/${docId}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      })
+      if (!res.ok && res.status !== 404) throw new Error(`Delete failed (${res.status})`)
+    } catch {
+      // Proceed with local removal even if backend fails
+    }
     setHistory(history.filter(d => d.id !== docId))
     if (activeDocument === docId) {
       setActiveDocument(null)
       setDocumentUrl(null)
     }
     setDeleteConfirm(null)
-  }
+    setDeleting(null)
+  }, [history, activeDocument, setHistory, setActiveDocument, setDocumentUrl])
 
   const onPreview = (doc: DocumentRecord) => {
     setPreviewDoc(doc)
@@ -126,6 +139,7 @@ export function FileManagerApp() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => onDelete(doc.id)}
+                    disabled={deleting === doc.id}
                     className="px-2 py-1 text-[9px] font-mono uppercase bg-[#ff3333]/20 text-[#ff3333]
                              border border-[#ff3333]/30 rounded hover:bg-[#ff3333]/30 cursor-pointer"
                   >

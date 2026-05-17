@@ -101,6 +101,7 @@ interface StoreState {
   windows: Record<string, WindowState>
   topZ: number
   openWindow: (appType: AppType) => void      // opens new instance
+  focusOrCreateWindow: (appType: AppType) => void  // focus existing or create new
   closeWindow: (id: string) => void
   minimizeWindow: (id: string) => void
   maximizeWindow: (id: string) => void
@@ -189,6 +190,24 @@ export const useStore = create<StoreState>((set, get) => ({
       topZ: topZ + 1,
       startMenuOpen: false,
     })
+  },
+
+  focusOrCreateWindow: (appType) => {
+    const { windows, topZ } = get()
+    // Find first existing open instance of this app type
+    const existing = Object.values(windows).find(w => w.appType === appType && w.isOpen)
+    if (existing) {
+      set({
+        windows: {
+          ...windows,
+          [existing.id]: { ...existing, isMinimized: false, zIndex: topZ + 1 },
+        },
+        topZ: topZ + 1,
+        startMenuOpen: false,
+      })
+    } else {
+      get().openWindow(appType)
+    }
   },
 
   closeWindow: (id) => {
