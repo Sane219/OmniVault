@@ -114,7 +114,7 @@ for (const cfg of WINDOW_CONFIGS) {
     isOpen: false,
     isMinimized: false,
     isMaximized: false,
-    zIndex: 20,
+    zIndex: 100,
     x: cfg.defaultX,
     y: cfg.defaultY,
     width: cfg.defaultWidth,
@@ -159,7 +159,7 @@ export const useStore = create<StoreState>((set, get) => ({
   setBootComplete: () => set({ booted: true }),
 
   windows: { ...defaultWindows },
-  topZ: 20,
+  topZ: 100,
 
   openWindow: (id) => {
     const { windows, topZ } = get()
