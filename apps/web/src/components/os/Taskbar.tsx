@@ -33,15 +33,20 @@ export function Taskbar() {
 
   return (
     <div className="taskbar">
-      {/* Brand */}
-      <div className="flex items-center gap-2 mr-4 pr-4 border-r border-panel-border">
-        <div className="w-7 h-7 rounded-terminal bg-matrix-green-faint border border-panel-border flex items-center justify-center shadow-neon">
-          <Shield className="w-4 h-4 text-matrix-green" />
-        </div>
-        <span className="text-xs font-mono font-bold text-matrix-green uppercase tracking-widest hidden sm:inline">
-          OmniVault
-        </span>
-      </div>
+      {/* START Button — chunky retro */}
+      <button
+        className="flex items-center gap-2 px-3 py-1.5 mr-3 border border-[#00ff88]
+                   bg-[#00ff88] text-black font-mono font-bold text-[11px] uppercase tracking-widest
+                   hover:bg-[#00ff88]/80 hover:shadow-[0_0_12px_rgba(0,255,136,0.5)]
+                   active:scale-95 transition-all duration-100 cursor-pointer"
+        style={{ borderRadius: '2px' }}
+      >
+        <Shield className="w-4 h-4" />
+        <span className="hidden sm:inline">Start</span>
+      </button>
+
+      {/* Separator */}
+      <div className="w-px h-6 bg-[#335533] mr-3" />
 
       {/* Running Apps */}
       <div className="flex-1 flex items-center gap-1 overflow-x-auto">
@@ -61,12 +66,12 @@ export function Taskbar() {
       </div>
 
       {/* System Tray */}
-      <div className="flex items-center gap-3 ml-4 pl-4 border-l border-panel-border">
+      <div className="flex items-center gap-3 ml-4 pl-4 border-l border-[#335533]">
         {/* User */}
-        <div className="flex items-center gap-2 text-text-dim">
+        <div className="flex items-center gap-2 text-[#4a5a4a]">
           <User className="w-3.5 h-3.5" />
-          <span className="text-[11px] font-mono hidden sm:inline truncate max-w-[120px]">
-            {userEmail || 'operator'}
+          <span className="text-[10px] font-mono hidden sm:inline truncate max-w-[100px]">
+            {userEmail || 'OPERATOR'}
           </span>
         </div>
 
@@ -76,7 +81,7 @@ export function Taskbar() {
         {/* Logout */}
         <button
           onClick={handleLogout}
-          className="p-1.5 text-text-dim hover:text-red-alert transition-colors cursor-pointer"
+          className="p-1.5 text-[#4a5a4a] hover:text-[#ff3333] transition-colors cursor-pointer"
           title="Terminate Session"
         >
           <LogOut className="w-3.5 h-3.5" />

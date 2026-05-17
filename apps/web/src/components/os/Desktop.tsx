@@ -4,6 +4,7 @@ import { useStore } from '../../store/useStore'
 import { AppWindow } from './AppWindow'
 import { DesktopIcon } from './DesktopIcon'
 import { Taskbar } from './Taskbar'
+import { HackerBackground } from './HackerBackground'
 import { Network, FileText, MessageSquare, FolderOpen } from 'lucide-react'
 import { GraphApp } from '../apps/GraphApp'
 import { ViewerApp } from '../apps/ViewerApp'
@@ -27,22 +28,17 @@ export function Desktop() {
   }, [openWindow])
 
   return (
-    <div
-      className="h-screen w-screen flex flex-col bg-void relative overflow-hidden"
-      style={{
-        backgroundImage:
-          'linear-gradient(rgba(0,255,136,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,136,0.04) 1px, transparent 1px)',
-        backgroundSize: '40px 40px',
-      }}
-    >
-      {/* Ambient orbs */}
-      <div className="orb w-[600px] h-[600px] bg-matrix-green/[0.04] top-[-200px] right-[-100px]" />
-      <div className="orb w-[400px] h-[400px] bg-matrix-green/[0.02] bottom-[200px] left-[-100px]" />
+    <div className="h-screen w-screen flex flex-col bg-[#0a0a0a] relative overflow-hidden">
+      {/* Wireframe Globe + Grid Background */}
+      <HackerBackground />
 
       {/* Desktop Area */}
       <div className="flex-1 relative min-h-0">
-        {/* Desktop Icons — top-left grid */}
-        <div className="absolute top-6 left-6 grid grid-cols-1 gap-2" style={{ zIndex: 60 }}>
+        {/* Desktop Icons — RIGHT side column (GeekPrank style) */}
+        <div
+          className="absolute top-8 right-6 flex flex-col gap-5"
+          style={{ zIndex: 60 }}
+        >
           {DESKTOP_ICONS.map(item => (
             <DesktopIcon
               key={item.id}
@@ -53,11 +49,12 @@ export function Desktop() {
           ))}
         </div>
 
-        {/* Welcome text */}
-        <div className="absolute top-6 left-32" style={{ zIndex: 60 }}>
-          <p className="text-[#4a5a4a] font-mono text-[11px] uppercase tracking-widest">
-            double-click an icon to launch
-          </p>
+        {/* Status HUD — top-left */}
+        <div className="absolute top-6 left-6 font-mono text-[10px] text-[#00ff88]/40 uppercase tracking-[0.3em] leading-relaxed" style={{ zIndex: 60 }}>
+          <p>&gt; system online</p>
+          <p>&gt; surveillance active</p>
+          <p>&gt; awaiting operator input</p>
+          <p className="mt-2 text-[#00ff88]/25">double-click folder to deploy</p>
         </div>
 
         {/* App Windows */}
