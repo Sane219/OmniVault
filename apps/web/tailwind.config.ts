@@ -38,8 +38,8 @@ const config: Config = {
         text: '#a0b0a0',
       },
       fontFamily: {
-        sans: ['var(--font-geist)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-geist-mono)', 'ui-monospace', 'monospace'],
+        sans: ['IBM Plex Sans', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
         terminal: '4px',
@@ -57,6 +57,8 @@ const config: Config = {
         'glitch': 'glitch-jitter 0.15s ease-in-out',
         'glow-pulse': 'glow-pulse 2s ease-in-out infinite alternate',
         'matrix-fall': 'matrix-fall 1.5s ease-in-out infinite',
+        'blink': 'blink 1s step-end infinite',
+        'boot-flicker': 'boot-flicker 0.5s ease-out forwards',
       },
       keyframes: {
         'glitch-jitter': {
@@ -74,6 +76,18 @@ const config: Config = {
           '0%': { opacity: '0', transform: 'translateY(-100%)' },
           '50%': { opacity: '1' },
           '100%': { opacity: '0', transform: 'translateY(100%)' },
+        },
+        'blink': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0' },
+        },
+        'boot-flicker': {
+          '0%': { opacity: '0' },
+          '5%': { opacity: '0.8' },
+          '10%': { opacity: '0.2' },
+          '15%': { opacity: '0.9' },
+          '20%': { opacity: '1' },
+          '100%': { opacity: '1' },
         },
       },
     },
