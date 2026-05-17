@@ -8,7 +8,8 @@ import { AuthDialog } from '../components/os/AuthDialog'
 export default function HomePage() {
   const { accessToken, booted, setBootComplete } = useStore()
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
-  const [showAuth, setShowAuth] = useState(false)
+
+  const showAuth = booted && !accessToken
 
   // Check for existing token on mount
   useEffect(() => {
@@ -17,15 +18,6 @@ export default function HomePage() {
       useStore.getState().setAccessToken(token)
     }
   }, [])
-
-  // Show auth dialog if no token after boot
-  useEffect(() => {
-    if (booted && !accessToken) {
-      setShowAuth(true)
-    } else if (accessToken) {
-      setShowAuth(false)
-    }
-  }, [booted, accessToken])
 
   return (
     <>
