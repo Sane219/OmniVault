@@ -16,10 +16,11 @@ export interface ChatMessage {
 }
 
 // ── OS Window types ──────────────────────────────────────────────────────────
-export type AppId = 'graph' | 'viewer' | 'chat' | 'files'
+export type AppType = 'graph' | 'viewer' | 'chat' | 'files' | 'terminal'
 
 export interface WindowState {
-  id: AppId
+  id: string          // unique instance id, e.g. "graph-1", "files"
+  appType: AppType
   title: string
   isOpen: boolean
   isMinimized: boolean
@@ -32,7 +33,7 @@ export interface WindowState {
 }
 
 interface WindowConfig {
-  id: AppId
+  appType: AppType
   title: string
   defaultX: number
   defaultY: number
@@ -40,12 +41,13 @@ interface WindowConfig {
   defaultHeight: number
 }
 
-export const WINDOW_CONFIGS: WindowConfig[] = [
-  { id: 'graph', title: 'Intelligence Graph', defaultX: 80, defaultY: 60, defaultWidth: 700, defaultHeight: 500 },
-  { id: 'viewer', title: 'Document Viewer', defaultX: 160, defaultY: 100, defaultWidth: 650, defaultHeight: 550 },
-  { id: 'chat', title: 'Terminal Chat', defaultX: 240, defaultY: 140, defaultWidth: 500, defaultHeight: 450 },
-  { id: 'files', title: 'File Manager', defaultX: 320, defaultY: 180, defaultWidth: 550, defaultHeight: 400 },
-]
+export const WINDOW_CONFIGS: Record<AppType, WindowConfig> = {
+  graph:    { appType: 'graph',    title: 'Intelligence Graph', defaultX: 80,  defaultY: 60,  defaultWidth: 700, defaultHeight: 500 },
+  viewer:   { appType: 'viewer',   title: 'Document Viewer',    defaultX: 160, defaultY: 100, defaultWidth: 650, defaultHeight: 550 },
+  chat:     { appType: 'chat',     title: 'Terminal Chat',      defaultX: 240, defaultY: 140, defaultWidth: 500, defaultHeight: 450 },
+  files:    { appType: 'files',    title: 'File Manager',       defaultX: 320, defaultY: 180, defaultWidth: 550, defaultHeight: 400 },
+  terminal: { appType: 'terminal', title: 'Terminal',           defaultX: 200, defaultY: 120, defaultWidth: 600, defaultHeight: 400 },
+}
 
 // ── Document management types ────────────────────────────────────────────────
 export type ProcessingStatus = 'idle' | 'uploading' | 'processing' | 'completed' | 'failed' | 'error'
@@ -75,7 +77,7 @@ interface StoreState {
   setChatMessages: (messages: ChatMessage[]) => void;
   clearChatMessages: () => void;
 
-  // Document management (shared across all app windows)
+  // Document management
   processingStatus: ProcessingStatus;
   statusMessage: string;
   errorMessage: string;
@@ -94,29 +96,46 @@ interface StoreState {
   // OS
   booted: boolean;
   setBootComplete: () => void;
-  windows: Record<AppId, WindowState>;
-  openWindow: (id: AppId) => void;
-  closeWindow: (id: AppId) => void;
-  minimizeWindow: (id: AppId) => void;
-  maximizeWindow: (id: AppId) => void;
-  restoreWindow: (id: AppId) => void;
-  focusWindow: (id: AppId) => void;
-  updateWindowPosition: (id: AppId, x: number, y: number) => void;
-  updateWindowSize: (id: AppId, width: number, height: number) => void;
-  topZ: number;
+
+  // Windows (multi-instance)
+  windows: Record<string, WindowState>
+  topZ: number
+  openWindow: (appType: AppType) => void      // opens new instance
+  focusOrCreateWindow: (appType: AppType) => void  // focus existing or create new
+  closeWindow: (id: string) => void
+  minimizeWindow: (id: string) => void
+  maximizeWindow: (id: string) => void
+  restoreWindow: (id: string) => void
+  focusWindow: (id: string) => void
+  updateWindowPosition: (id: string, x: number, y: number) => void
+  updateWindowSize: (id: string, width: number, height: number) => void
+  snapWindow: (id: string, snap: 'left' | 'right' | 'maximize') => void
+
+  // Start menu
+  startMenuOpen: boolean
+  toggleStartMenu: () => void
+  closeStartMenu: () => void
 }
 
-const defaultWindows: Record<AppId, WindowState> = {} as Record<AppId, WindowState>
-for (const cfg of WINDOW_CONFIGS) {
-  defaultWindows[cfg.id] = {
-    id: cfg.id,
+let instanceCounters: Record<string, number> = {}
+
+function createWindowInstance(appType: AppType): WindowState {
+  const cfg = WINDOW_CONFIGS[appType]
+  if (!instanceCounters[appType]) instanceCounters[appType] = 0
+  instanceCounters[appType]++
+  const id = `${appType}-${instanceCounters[appType]}`
+  // Stagger position for multiple instances
+  const offset = (instanceCounters[appType] - 1) * 30
+  return {
+    id,
+    appType,
     title: cfg.title,
-    isOpen: false,
+    isOpen: true,
     isMinimized: false,
     isMaximized: false,
     zIndex: 100,
-    x: cfg.defaultX,
-    y: cfg.defaultY,
+    x: cfg.defaultX + offset,
+    y: cfg.defaultY + offset,
     width: cfg.defaultWidth,
     height: cfg.defaultHeight,
   }
@@ -158,92 +177,116 @@ export const useStore = create<StoreState>((set, get) => ({
   booted: false,
   setBootComplete: () => set({ booted: true }),
 
-  windows: { ...defaultWindows },
+  // Windows
+  windows: {},
   topZ: 100,
 
-  openWindow: (id) => {
+  openWindow: (appType) => {
     const { windows, topZ } = get()
-    const newZ = topZ + 1
+    const win = createWindowInstance(appType)
+    win.zIndex = topZ + 1
     set({
-      windows: {
-        ...windows,
-        [id]: { ...windows[id], isOpen: true, isMinimized: false, zIndex: newZ },
-      },
-      topZ: newZ,
+      windows: { ...windows, [win.id]: win },
+      topZ: topZ + 1,
+      startMenuOpen: false,
     })
+  },
+
+  focusOrCreateWindow: (appType) => {
+    const { windows, topZ } = get()
+    // Find first existing open instance of this app type
+    const existing = Object.values(windows).find(w => w.appType === appType && w.isOpen)
+    if (existing) {
+      set({
+        windows: {
+          ...windows,
+          [existing.id]: { ...existing, isMinimized: false, zIndex: topZ + 1 },
+        },
+        topZ: topZ + 1,
+        startMenuOpen: false,
+      })
+    } else {
+      get().openWindow(appType)
+    }
   },
 
   closeWindow: (id) => {
     const { windows } = get()
-    set({
-      windows: {
-        ...windows,
-        [id]: { ...windows[id], isOpen: false, isMinimized: false },
-      },
-    })
+    const next = { ...windows }
+    delete next[id]
+    set({ windows: next })
   },
 
   minimizeWindow: (id) => {
     const { windows } = get()
-    set({
-      windows: {
-        ...windows,
-        [id]: { ...windows[id], isMinimized: true },
-      },
-    })
+    if (!windows[id]) return
+    set({ windows: { ...windows, [id]: { ...windows[id], isMinimized: true } } })
   },
 
   maximizeWindow: (id) => {
     const { windows } = get()
-    set({
-      windows: {
-        ...windows,
-        [id]: { ...windows[id], isMaximized: !windows[id].isMaximized },
-      },
-    })
+    if (!windows[id]) return
+    set({ windows: { ...windows, [id]: { ...windows[id], isMaximized: !windows[id].isMaximized } } })
   },
 
   restoreWindow: (id) => {
     const { windows, topZ } = get()
-    const newZ = topZ + 1
+    if (!windows[id]) return
     set({
-      windows: {
-        ...windows,
-        [id]: { ...windows[id], isMinimized: false, zIndex: newZ },
-      },
-      topZ: newZ,
+      windows: { ...windows, [id]: { ...windows[id], isMinimized: false, zIndex: topZ + 1 } },
+      topZ: topZ + 1,
     })
   },
 
   focusWindow: (id) => {
     const { windows, topZ } = get()
-    const newZ = topZ + 1
+    if (!windows[id]) return
     set({
-      windows: {
-        ...windows,
-        [id]: { ...windows[id], zIndex: newZ },
-      },
-      topZ: newZ,
+      windows: { ...windows, [id]: { ...windows[id], zIndex: topZ + 1 } },
+      topZ: topZ + 1,
     })
   },
 
   updateWindowPosition: (id, x, y) => {
     const { windows } = get()
-    set({
-      windows: {
-        ...windows,
-        [id]: { ...windows[id], x, y },
-      },
-    })
+    if (!windows[id]) return
+    set({ windows: { ...windows, [id]: { ...windows[id], x, y } } })
   },
 
   updateWindowSize: (id, width, height) => {
     const { windows } = get()
+    if (!windows[id]) return
+    set({ windows: { ...windows, [id]: { ...windows[id], width, height } } })
+  },
+
+  snapWindow: (id, snap) => {
+    const { windows } = get()
+    const win = windows[id]
+    if (!win) return
+    if (snap === 'maximize') {
+      set({ windows: { ...windows, [id]: { ...win, isMaximized: true } } })
+      return
+    }
+    const sw = window.innerWidth
+    const sh = window.innerHeight - 48 // taskbar height
+    const halfW = Math.floor(sw / 2)
     set({
       windows: {
         ...windows,
-        [id]: { ...windows[id], width, height },
+        [id]: {
+          ...win,
+          isMaximized: false,
+          x: snap === 'left' ? 0 : halfW,
+          y: 0,
+          width: halfW,
+          height: sh,
+        },
       },
     })
   },
+
+  // Start menu
+  startMenuOpen: false,
+  toggleStartMenu: () => set(s => ({ startMenuOpen: !s.startMenuOpen })),
+  closeStartMenu: () => set({ startMenuOpen: false }),
 }))
